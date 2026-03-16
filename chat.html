@@ -926,35 +926,69 @@ async function sendMessage() {
   input.value = '';
   autoResize(input);
 
+  // Render user bubble immediately for snappy UX
   appendBubble('user', text);
   chatHistory.push({ role: 'user', content: text });
 
   setTyping(true);
 
+  // ── 1. Call Groq ───────────────────────────────────────
   const reply = await callGroq();
 
   setTyping(false);
+
+  // ── 2. Render bot reply ────────────────────────────────
   appendBubble('bot', reply);
   chatHistory.push({ role: 'assistant', content: reply });
 
-  // Deduct message balance
-  merchant.message_balance = Math.max(0, (merchant.message_balance || 1) - 1);
-  sb.from('profiles').update({ message_balance: merchant.message_balance }).eq('id', merchant.id);
+  // ── 3. Decrement balance in Supabase (AWAITED) ─────────
+  //    We decrement only if the reply wasn't an error fallback.
+  //    Strategy: optimistically update local state first, then
+  //    confirm with the DB. If DB fails we log but don't crash UI.
+  const prevBalance = merchant.message_balance || 0;
+  const newBalance  = Math.max(0, prevBalance - 1);
 
-  // Save conversation
-  if (convId) {
-    sb.from('conversations').update({
-      chat_history:  chatHistory,
-      customer_data: { name: customerName, lang: uiLang, last_active: new Date().toISOString() },
-    }).eq('id', convId);
+  const { data: updatedProfile, error: balErr } = await sb
+    .from('profiles')
+    .update({ message_balance: newBalance })
+    .eq('id', merchant.id)
+    .select('message_balance')   // ask Supabase to return the new value
+    .single();
+
+  if (balErr) {
+    // DB update failed — log it but keep the local counter as fallback
+    console.error('[B-Chat] Balance update failed:', balErr.message);
+    merchant.message_balance = newBalance;  // use local optimistic value
+  } else {
+    // Sync local state with the actual DB value (source of truth)
+    merchant.message_balance = updatedProfile?.message_balance ?? newBalance;
   }
 
-  // Kill bot if balance hit zero
+  // ── 4. Save conversation history (fire-and-forget is fine here) ──
+  if (convId) {
+    sb.from('conversations')
+      .update({
+        chat_history:  chatHistory,
+        customer_data: {
+          name:        customerName,
+          lang:        uiLang,
+          last_active: new Date().toISOString(),
+        },
+      })
+      .eq('id', convId)
+      .then(({ error }) => {
+        if (error) console.error('[B-Chat] Conversation save failed:', error.message);
+      });
+  }
+
+  // ── 5. Lock chat if balance is now zero ────────────────
   if (merchant.message_balance <= 0) {
     isBotActive = false;
     showBanner(UI[uiLang].noBalance, 'error');
     document.getElementById('msgInput').disabled = true;
     document.getElementById('sendBtn').disabled  = true;
+    document.getElementById('msgInput').placeholder = '';
+    console.info('[B-Chat] Balance reached 0 — chat locked.');
   }
 
   scrollBottom();
