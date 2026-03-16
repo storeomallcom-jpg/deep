@@ -941,27 +941,33 @@ async function sendMessage() {
   appendBubble('bot', reply);
   chatHistory.push({ role: 'assistant', content: reply });
 
-  // ── 3. Decrement balance in Supabase (AWAITED) ─────────
-  //    We decrement only if the reply wasn't an error fallback.
-  //    Strategy: optimistically update local state first, then
-  //    confirm with the DB. If DB fails we log but don't crash UI.
-  const prevBalance = merchant.message_balance || 0;
-  const newBalance  = Math.max(0, prevBalance - 1);
+  // ── 3. Decrement balance via secure Supabase RPC ──────────
+  //    The SQL function `decrement_message_balance` runs server-side:
+  //    UPDATE profiles SET message_balance = message_balance - 1
+  //    WHERE id = m_id AND message_balance > 0;
+  //    This prevents race conditions and negative balances.
+  const { error: rpcErr } = await sb.rpc('decrement_message_balance', {
+    m_id: merchant.id,
+  });
 
-  const { data: updatedProfile, error: balErr } = await sb
-    .from('profiles')
-    .update({ message_balance: newBalance })
-    .eq('id', merchant.id)
-    .select('message_balance')   // ask Supabase to return the new value
-    .single();
-
-  if (balErr) {
-    // DB update failed — log it but keep the local counter as fallback
-    console.error('[B-Chat] Balance update failed:', balErr.message);
-    merchant.message_balance = newBalance;  // use local optimistic value
+  if (rpcErr) {
+    // RPC failed (network, permissions, etc.) — log and use local fallback
+    console.error('[B-Chat] decrement_message_balance RPC failed:', rpcErr.message);
+    merchant.message_balance = Math.max(0, (merchant.message_balance || 1) - 1);
   } else {
-    // Sync local state with the actual DB value (source of truth)
-    merchant.message_balance = updatedProfile?.message_balance ?? newBalance;
+    // Re-fetch the real balance from DB — this is the source of truth
+    const { data: freshProfile, error: fetchErr } = await sb
+      .from('profiles')
+      .select('message_balance')
+      .eq('id', merchant.id)
+      .single();
+
+    if (fetchErr) {
+      console.error('[B-Chat] Balance re-fetch failed:', fetchErr.message);
+      merchant.message_balance = Math.max(0, (merchant.message_balance || 1) - 1);
+    } else {
+      merchant.message_balance = freshProfile.message_balance ?? 0;
+    }
   }
 
   // ── 4. Save conversation history (fire-and-forget is fine here) ──
@@ -984,10 +990,13 @@ async function sendMessage() {
   // ── 5. Lock chat if balance is now zero ────────────────
   if (merchant.message_balance <= 0) {
     isBotActive = false;
-    showBanner(UI[uiLang].noBalance, 'error');
-    document.getElementById('msgInput').disabled = true;
-    document.getElementById('sendBtn').disabled  = true;
-    document.getElementById('msgInput').placeholder = '';
+    // Show exact required Arabic stop message
+    showBanner('⚠️ انتهى الرصيد، يرجى تعبئة الحساب', 'error');
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn  = document.getElementById('sendBtn');
+    msgInput.disabled     = true;
+    msgInput.placeholder  = '';
+    sendBtn.disabled      = true;
     console.info('[B-Chat] Balance reached 0 — chat locked.');
   }
 
