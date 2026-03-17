@@ -7,338 +7,169 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
-  :root { --accent: #6366f1; --accent2: #a855f7; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --accent:#6366f1; --accent2:#a855f7; }
+  *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:'DM Sans',sans-serif; background:#07080f; color:#e2e8f0; min-height:100vh; }
   h1,h2,h3,.display { font-family:'Syne',sans-serif; }
-
-  /* ── LAYOUT ─────────────────────────────────── */
   .app { display:flex; min-height:100vh; }
-
-  /* ── SIDEBAR ────────────────────────────────── */
-  .sidebar {
-    width: 260px; min-height: 100vh; flex-shrink: 0;
-    background: rgba(15,23,42,.9);
-    border-right: 1px solid rgba(255,255,255,.06);
-    backdrop-filter: blur(20px);
-    display: flex; flex-direction: column;
-    padding: 0 0 1.5rem; position: sticky; top: 0;
-    transition: width .3s;
-  }
-  .sidebar-logo {
-    padding: 1.5rem 1.5rem 1rem;
-    font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem;
-    background: linear-gradient(135deg,#6366f1,#a855f7);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    display: flex; align-items: center; gap: .75rem;
-  }
-  .nav-items { flex:1; padding:1rem .75rem; display:flex;flex-direction:column;gap:.25rem; }
-  .nav-item {
-    display: flex; align-items: center; gap: .9rem;
-    padding: .75rem 1rem; border-radius: 12px; cursor: pointer;
-    color: #64748b; font-weight: 500; font-size: .9rem;
-    transition: all .2s;
-    border: 1px solid transparent;
-  }
-  .nav-item:hover { background: rgba(255,255,255,.05); color: #94a3b8; }
-  .nav-item.active {
-    background: rgba(99,102,241,.15);
-    border-color: rgba(99,102,241,.3);
-    color: #a5b4fc;
-  }
-  .nav-item .icon { font-size: 1.2rem; width:24px; text-align:center; }
-  .sidebar-footer { padding: .75rem; border-top: 1px solid rgba(255,255,255,.06); }
-  .user-card {
-    display:flex;align-items:center;gap:.75rem;padding:.75rem;border-radius:12px;
-    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
-  }
-  .user-avatar {
-    width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;
-    background:linear-gradient(135deg,#6366f1,#a855f7);
-    display:flex;align-items:center;justify-content:center;font-size:1rem;color:#fff;
-  }
-  .user-avatar img { width:100%;height:100%;object-fit:cover; }
-  .user-info { flex:1;min-width:0; }
-  .user-name { font-weight:600;font-size:.85rem;color:#f1f5f9;truncate;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-  .user-role { font-size:.75rem;color:#475569; }
-  .logout-btn {
-    padding:.4rem .6rem;border-radius:8px;background:rgba(239,68,68,.1);
-    border:1px solid rgba(239,68,68,.2);color:#f87171;cursor:pointer;font-size:.8rem;
-    transition:all .2s;white-space:nowrap;
-  }
+  .sidebar { width:260px; min-height:100vh; flex-shrink:0; background:rgba(15,23,42,.9); border-right:1px solid rgba(255,255,255,.06); backdrop-filter:blur(20px); display:flex; flex-direction:column; padding:0 0 1.5rem; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .sidebar-logo { padding:1.5rem 1.5rem 1rem; font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem; background:linear-gradient(135deg,#6366f1,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; gap:.75rem; }
+  .nav-items { flex:1; padding:1rem .75rem; display:flex; flex-direction:column; gap:.25rem; }
+  .nav-item { display:flex; align-items:center; gap:.9rem; padding:.75rem 1rem; border-radius:12px; cursor:pointer; color:#64748b; font-weight:500; font-size:.9rem; transition:all .2s; border:1px solid transparent; }
+  .nav-item:hover { background:rgba(255,255,255,.05); color:#94a3b8; }
+  .nav-item.active { background:rgba(99,102,241,.15); border-color:rgba(99,102,241,.3); color:#a5b4fc; }
+  .nav-item .icon { font-size:1.2rem; width:24px; text-align:center; }
+  .sidebar-footer { padding:.75rem; border-top:1px solid rgba(255,255,255,.06); }
+  .user-card { display:flex; align-items:center; gap:.75rem; padding:.75rem; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
+  .user-avatar { width:38px; height:38px; border-radius:50%; overflow:hidden; flex-shrink:0; background:linear-gradient(135deg,#6366f1,#a855f7); display:flex; align-items:center; justify-content:center; font-size:1rem; color:#fff; }
+  .user-avatar img { width:100%; height:100%; object-fit:cover; }
+  .user-info { flex:1; min-width:0; }
+  .user-name { font-weight:600; font-size:.85rem; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .user-role { font-size:.75rem; color:#475569; }
+  .logout-btn { padding:.4rem .6rem; border-radius:8px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; cursor:pointer; font-size:.8rem; transition:all .2s; white-space:nowrap; }
   .logout-btn:hover { background:rgba(239,68,68,.2); }
-
-  /* ── MAIN ───────────────────────────────────── */
   .main { flex:1; overflow-x:hidden; }
-  .topbar {
-    padding:1.25rem 2rem;
-    display:flex;align-items:center;justify-content:space-between;
-    border-bottom:1px solid rgba(255,255,255,.06);
-    background:rgba(7,8,15,.8);backdrop-filter:blur(20px);
-    position:sticky;top:0;z-index:50;
-  }
-  .topbar h1 { font-size:1.25rem;font-weight:700;color:#f1f5f9; }
-  .content { padding:2rem; max-width:1100px; }
-
-  /* ── GLASS CARD ─────────────────────────────── */
-  .glass {
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 20px;
-    backdrop-filter: blur(12px);
-    padding: 1.75rem;
-  }
-  .glass-dark {
-    background: rgba(15,23,42,.6);
-    border: 1px solid rgba(255,255,255,.07);
-    border-radius: 16px;
-    backdrop-filter: blur(10px);
-    padding: 1.5rem;
-  }
-
-  /* ── FORM ELEMENTS ──────────────────────────── */
-  .form-label { display:block;font-size:.85rem;color:#94a3b8;margin-bottom:.4rem;font-weight:500; }
-  .form-input {
-    width:100%;padding:.7rem 1rem;border-radius:10px;outline:none;
-    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-    color:#f1f5f9;font-size:.9rem;font-family:'DM Sans',sans-serif;
-    transition:border-color .2s;
-  }
-  .form-input:focus { border-color:#6366f1;background:rgba(99,102,241,.08); }
-  .form-textarea {
-    width:100%;padding:.8rem 1rem;border-radius:10px;outline:none;resize:vertical;min-height:140px;
-    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-    color:#f1f5f9;font-size:.9rem;font-family:'DM Sans',sans-serif;line-height:1.6;
-    transition:border-color .2s;
-  }
-  .form-textarea:focus { border-color:#6366f1;background:rgba(99,102,241,.08); }
-
-  /* ── BUTTONS ────────────────────────────────── */
-  .btn-primary {
-    padding:.7rem 1.6rem;border-radius:10px;border:none;cursor:pointer;
-    background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
-    font-weight:600;font-size:.9rem;font-family:'DM Sans',sans-serif;
-    transition:all .25s;box-shadow:0 0 20px rgba(99,102,241,.3);
-  }
-  .btn-primary:hover { transform:translateY(-1px);box-shadow:0 0 30px rgba(99,102,241,.5); }
-  .btn-primary:disabled { opacity:.5;cursor:not-allowed;transform:none; }
-  .btn-outline {
-    padding:.7rem 1.4rem;border-radius:10px;cursor:pointer;
-    background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);
-    color:#a5b4fc;font-weight:600;font-size:.9rem;font-family:'DM Sans',sans-serif;
-    transition:all .2s;
-  }
-  .btn-outline:hover { background:rgba(99,102,241,.2); }
-  .btn-success {
-    padding:.7rem 1.4rem;border-radius:10px;cursor:pointer;
-    background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);
-    color:#6ee7b7;font-weight:600;font-size:.9rem;font-family:'DM Sans',sans-serif;
-    transition:all .2s;
-  }
+  .topbar { padding:1.25rem 2rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,.06); background:rgba(7,8,15,.8); backdrop-filter:blur(20px); position:sticky; top:0; z-index:50; }
+  .topbar h1 { font-size:1.1rem; font-weight:700; color:#f1f5f9; }
+  .content { padding:1.75rem 2rem; max-width:860px; }
+  .glass { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:1.75rem; backdrop-filter:blur(12px); margin-bottom:1.5rem; }
+  .glass-dark { background:rgba(15,23,42,.7); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:1.1rem; }
+  .section-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.25rem; gap:.75rem; }
+  .section-title { font-size:1rem; font-weight:700; color:#f1f5f9; display:flex; align-items:center; gap:.5rem; }
+  .section-sub { font-size:.78rem; color:#475569; margin-top:.2rem; }
+  .form-label { display:block; font-size:.78rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem; }
+  .form-input { width:100%; padding:.7rem 1rem; border-radius:12px; outline:none; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; font-size:.9rem; font-family:'DM Sans',sans-serif; transition:border-color .2s,background .2s; }
+  .form-input:focus { border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.06); }
+  .form-input::placeholder { color:#334155; }
+  .form-select { width:100%; padding:.7rem 1rem; border-radius:12px; outline:none; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; font-size:.9rem; font-family:'DM Sans',sans-serif; cursor:pointer; transition:border-color .2s; -webkit-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%2364748b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .85rem center; padding-right:2.2rem; }
+  .form-select:focus { border-color:rgba(99,102,241,.6); background-color:rgba(99,102,241,.06); }
+  .form-select option { background:#1e293b; color:#e2e8f0; }
+  .form-textarea { width:100%; padding:.75rem 1rem; border-radius:12px; outline:none; resize:vertical; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; font-size:.9rem; font-family:'DM Sans',sans-serif; line-height:1.6; transition:border-color .2s,background .2s; min-height:90px; }
+  .form-textarea:focus { border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.06); }
+  .form-textarea::placeholder { color:#334155; }
+  .btn-primary { padding:.65rem 1.4rem; border-radius:12px; background:linear-gradient(135deg,#6366f1,#a855f7); color:#fff; font-weight:700; font-size:.9rem; border:none; cursor:pointer; transition:all .2s; box-shadow:0 0 20px rgba(99,102,241,.3); }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 0 30px rgba(99,102,241,.5); }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-outline { padding:.55rem 1.1rem; border-radius:10px; background:transparent; border:1px solid rgba(255,255,255,.12); color:#94a3b8; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; }
+  .btn-outline:hover { background:rgba(255,255,255,.07); color:#e2e8f0; }
+  .btn-success { padding:.65rem 1.25rem; border-radius:12px; background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.3); color:#6ee7b7; font-weight:700; font-size:.875rem; cursor:pointer; transition:all .2s; }
   .btn-success:hover { background:rgba(16,185,129,.25); }
-
-  /* ── TABS ───────────────────────────────────── */
-  .tabs { display:flex;gap:.25rem;margin-bottom:1.5rem;flex-wrap:wrap; }
-  .tab {
-    padding:.5rem 1.1rem;border-radius:10px;cursor:pointer;
-    font-size:.875rem;font-weight:600;color:#64748b;
-    border:1px solid transparent;transition:all .2s;
-  }
-  .tab:hover { color:#94a3b8;background:rgba(255,255,255,.04); }
-  .tab.active { background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);color:#a5b4fc; }
+  .btn-add { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.55rem 1rem; border-radius:10px; background:rgba(99,102,241,.1); border:1.5px dashed rgba(99,102,241,.4); color:#a5b4fc; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; width:100%; }
+  .btn-add:hover { background:rgba(99,102,241,.2); border-color:rgba(99,102,241,.7); }
+  .btn-add-sm { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .85rem; border-radius:9px; background:rgba(99,102,241,.1); border:1.5px dashed rgba(99,102,241,.4); color:#a5b4fc; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .2s; }
+  .btn-add-sm:hover { background:rgba(99,102,241,.2); }
+  .btn-remove { width:30px; height:30px; border-radius:8px; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); color:#f87171; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; transition:all .2s; line-height:1; }
+  .btn-remove:hover { background:rgba(239,68,68,.22); }
+  .repeater-list { display:flex; flex-direction:column; gap:.6rem; margin-bottom:.85rem; }
+  .repeater-row { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:.85rem .9rem; animation:rowIn .2s ease both; }
+  @keyframes rowIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+  .row-grid-ship { display:grid; grid-template-columns:1fr 100px 32px; gap:.6rem; align-items:end; }
+  .row-grid-prod { display:grid; grid-template-columns:1fr 90px 32px; gap:.6rem; align-items:end; margin-bottom:.6rem; }
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+  .stat-card { padding:1.25rem; border-radius:16px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); }
+  .s-label { font-size:.72rem; color:#475569; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.4rem; }
+  .s-value { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:#f1f5f9; margin-bottom:.25rem; }
+  .s-sub { font-size:.75rem; color:#475569; }
+  .progress-track { height:6px; border-radius:999px; background:rgba(255,255,255,.07); overflow:hidden; margin-top:.5rem; }
+  .progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#6366f1,#a855f7); transition:width .5s ease; }
   .tab-content { display:none; }
   .tab-content.active { display:block; }
-
-  /* ── STAT CARDS ─────────────────────────────── */
-  .stat-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem; }
-  .stat-card {
-    padding:1.5rem;border-radius:16px;
-    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
-  }
-  .stat-card .s-label { font-size:.8rem;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem; }
-  .stat-card .s-value { font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#f1f5f9; }
-  .stat-card .s-sub { font-size:.8rem;color:#64748b;margin-top:.2rem; }
-
-  /* ── PROGRESS BAR ───────────────────────────── */
-  .progress-track { width:100%;height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:.75rem; }
-  .progress-fill { height:100%;border-radius:4px;background:linear-gradient(90deg,#6366f1,#a855f7);transition:width .5s ease; }
-
-  /* ── LOGO UPLOAD ────────────────────────────── */
-  .logo-upload-area {
-    border:2px dashed rgba(99,102,241,.3);border-radius:16px;padding:2rem;
-    text-align:center;cursor:pointer;transition:all .2s;
-    background:rgba(99,102,241,.05);
-  }
-  .logo-upload-area:hover { border-color:rgba(99,102,241,.6);background:rgba(99,102,241,.1); }
-  .logo-preview { width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(99,102,241,.4); }
-
-  /* ── COLOR PICKER ───────────────────────────── */
-  .color-swatch {
-    width:36px;height:36px;border-radius:8px;cursor:pointer;
-    border:2px solid transparent;transition:all .2s;
-  }
-  .color-swatch.selected { border-color:#fff;transform:scale(1.15); }
-  #customColorPicker { -webkit-appearance:none;appearance:none;width:36px;height:36px;border:none;
-    border-radius:8px;cursor:pointer;padding:0;background:none; }
-  #customColorPicker::-webkit-color-swatch-wrapper { padding:0; }
-  #customColorPicker::-webkit-color-swatch { border:2px solid rgba(255,255,255,.2);border-radius:6px; }
-
-  /* ── DEPLOY LINK ────────────────────────────── */
-  .link-box {
-    display:flex;align-items:center;gap:.75rem;
-    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
-    border-radius:12px;padding:.75rem 1rem;
-  }
-  .link-box .link-url { flex:1;font-size:.85rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-
-  /* ── ALERT ──────────────────────────────────── */
-  .alert { padding:.85rem 1rem;border-radius:10px;font-size:.875rem;margin-bottom:1rem; }
-  .alert-success { background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#6ee7b7; }
-  .alert-error   { background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#fca5a5; }
-  .alert-info    { background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);color:#a5b4fc; }
-
-  /* ── TOASTER ────────────────────────────────── */
-  .toaster {
-    position:fixed;top:1.5rem;right:1.5rem;z-index:9999;
-    display:flex;flex-direction:column;gap:.5rem;
-  }
-  .toast {
-    padding:.75rem 1.25rem;border-radius:12px;font-size:.875rem;font-weight:500;
-    background:rgba(16,185,129,.9);color:#fff;
-    box-shadow:0 8px 30px rgba(0,0,0,.4);
-    animation:toastIn .3s ease;
-  }
-  .toast.error { background:rgba(239,68,68,.9); }
+  .alert { padding:.85rem 1rem; border-radius:12px; font-size:.85rem; margin-top:.75rem; }
+  .alert-success { background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.25); color:#6ee7b7; }
+  .alert-error   { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.25);  color:#fca5a5; }
+  .alert-info    { background:rgba(99,102,241,.08); border:1px solid rgba(99,102,241,.2);  color:#a5b4fc; }
+  .logo-upload-area { border:2px dashed rgba(255,255,255,.12); border-radius:16px; padding:1.25rem 2rem; text-align:center; cursor:pointer; transition:all .2s; }
+  .logo-upload-area:hover { border-color:rgba(99,102,241,.5); background:rgba(99,102,241,.05); }
+  .logo-preview { width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid rgba(99,102,241,.5); }
+  .color-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .2s; flex-shrink:0; }
+  .color-swatch.selected { border-color:#fff; transform:scale(1.15); box-shadow:0 0 12px rgba(255,255,255,.3); }
+  .link-box { display:flex; align-items:center; gap:.75rem; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.75rem 1rem; }
+  .link-url { flex:1; font-size:.8rem; color:#a5b4fc; word-break:break-all; }
+  .toaster { position:fixed; bottom:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; }
+  .toast { padding:.7rem 1.1rem; border-radius:12px; background:rgba(99,102,241,.92); color:#fff; font-size:.875rem; font-weight:600; box-shadow:0 8px 30px rgba(0,0,0,.4); animation:toastIn .3s ease both; backdrop-filter:blur(8px); max-width:320px; }
+  .toast.error { background:rgba(239,68,68,.92); }
   @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
-
-  /* ── RESPONSIVE ─────────────────────────────── */
-  @media(max-width:768px) {
-    .sidebar { width:100%;min-height:auto;flex-direction:row;align-items:center;position:sticky;flex-shrink:1;border-right:none;border-bottom:1px solid rgba(255,255,255,.06); }
-    .sidebar-logo { border-bottom:none;padding:1rem; }
-    .nav-items { flex-direction:row;flex:1;padding:.5rem;overflow-x:auto;gap:.15rem; }
-    .nav-item span.label { display:none; }
-    .nav-item { padding:.6rem; }
-    .sidebar-footer { display:none; }
-    .app { flex-direction:column; }
-    .main { width:100%; }
-    .content { padding:1rem; }
-    .topbar { padding:1rem; }
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}
-
-  /* Grid helpers */
-  .grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:1.25rem; }
-  @media(max-width:600px) { .grid-2 { grid-template-columns:1fr; } }
+  .json-preview { background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:1rem; font-family:monospace; font-size:.72rem; color:#64748b; white-space:pre-wrap; word-break:break-all; max-height:220px; overflow-y:auto; display:none; }
+  .json-preview.visible { display:block; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+  @media(max-width:600px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .row-grid-ship { grid-template-columns:1fr 80px 32px; } .row-grid-prod { grid-template-columns:1fr 80px 32px; } }
+  @media(max-width:768px) { .sidebar { width:100%; min-height:auto; flex-direction:row; align-items:center; position:sticky; flex-shrink:1; border-right:none; border-bottom:1px solid rgba(255,255,255,.06); height:auto; overflow-y:visible; } .sidebar-logo { border-bottom:none; padding:1rem; } .nav-items { flex-direction:row; flex:1; padding:.5rem; overflow-x:auto; gap:.15rem; } .nav-item span.label { display:none; } .nav-item { padding:.6rem; } .sidebar-footer { display:none; } .app { flex-direction:column; } .main { width:100%; } .content { padding:1rem; } .topbar { padding:1rem; } }
+  [dir="rtl"] .sidebar { border-right:none; border-left:1px solid rgba(255,255,255,.06); }
+  [dir="rtl"] .toaster { left:1.25rem; right:auto; }
+  [dir="rtl"] .toast { animation-name:toastInRTL; }
+  @keyframes toastInRTL { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+  [dir="rtl"] .form-label,[dir="rtl"] .form-input,[dir="rtl"] .form-textarea,[dir="rtl"] .form-select { text-align:right; }
+  [dir="rtl"] .link-box { flex-direction:row-reverse; }
+  [dir="rtl"] .nav-item { flex-direction:row-reverse; }
+  [dir="rtl"] .form-select { background-position:left .85rem center; padding-right:.9rem; padding-left:2.2rem; }
+  @media(max-width:768px) { [dir="rtl"] .sidebar { border-left:none; border-bottom:1px solid rgba(255,255,255,.06); } [dir="rtl"] .nav-items { flex-direction:row-reverse; } }
+  ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:#1e2035;border-radius:3px}
 </style>
 </head>
 <body>
-
 <div class="toaster" id="toaster"></div>
-
 <div class="app">
-  <!-- ── SIDEBAR ─────────────────────────────────────── -->
+
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <span>⚡</span>
-      <span>B-Chat</span>
-    </div>
+    <div class="sidebar-logo"><span>⚡</span><span>B-Chat</span></div>
     <nav class="nav-items">
-      <div class="nav-item active" onclick="showTab('customize')" id="nav-customize">
-        <span class="icon">🎨</span><span class="label" data-i18n="tab_custom">Customize</span>
-      </div>
-      <div class="nav-item" onclick="showTab('brain')" id="nav-brain">
-        <span class="icon">🧠</span><span class="label" data-i18n="tab_brain">Brain</span>
-      </div>
-      <div class="nav-item" onclick="showTab('analytics')" id="nav-analytics">
-        <span class="icon">📊</span><span class="label" data-i18n="tab_analytics">Analytics</span>
-      </div>
-      <div class="nav-item" onclick="showTab('deploy')" id="nav-deploy">
-        <span class="icon">🔗</span><span class="label" data-i18n="tab_deploy">Deploy</span>
-      </div>
-      <div class="nav-item" onclick="showTab('billing')" id="nav-billing">
-        <span class="icon">💳</span><span class="label" data-i18n="tab_billing">Billing</span>
-      </div>
+      <div class="nav-item active" onclick="showTab('customize')" id="nav-customize"><span class="icon">🎨</span><span class="label" data-i18n="tab_custom">Customize</span></div>
+      <div class="nav-item" onclick="showTab('brain')" id="nav-brain"><span class="icon">🧠</span><span class="label" data-i18n="tab_brain">Brain</span></div>
+      <div class="nav-item" onclick="showTab('analytics')" id="nav-analytics"><span class="icon">📊</span><span class="label" data-i18n="tab_analytics">Analytics</span></div>
+      <div class="nav-item" onclick="showTab('deploy')" id="nav-deploy"><span class="icon">🔗</span><span class="label" data-i18n="tab_deploy">Deploy</span></div>
+      <div class="nav-item" onclick="showTab('billing')" id="nav-billing"><span class="icon">💳</span><span class="label" data-i18n="tab_billing">Billing</span></div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-card">
         <div class="user-avatar" id="sidebarAvatar">U</div>
-        <div class="user-info">
-          <div class="user-name" id="sidebarName">Loading...</div>
-          <div class="user-role">Merchant</div>
-        </div>
+        <div class="user-info"><div class="user-name" id="sidebarName">Loading...</div><div class="user-role">Merchant</div></div>
         <button class="logout-btn" onclick="doLogout()" data-i18n="logout">Out</button>
       </div>
     </div>
   </aside>
 
-  <!-- ── MAIN ───────────────────────────────────────── -->
   <main class="main">
     <div class="topbar">
       <h1 id="tabTitle" data-i18n="tab_custom">Customize</h1>
       <div style="display:flex;align-items:center;gap:.75rem;">
-        <select style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:8px;padding:.3rem .6rem;font-size:.8rem;cursor:pointer;outline:none;" onchange="setLang(this.value)" id="langSelect">
-          <option value="en">🇬🇧 EN</option>
-          <option value="ar">🇸🇦 AR</option>
-          <option value="fr">🇫🇷 FR</option>
-          <option value="es">🇪🇸 ES</option>
-          <option value="de">🇩🇪 DE</option>
-          <option value="sv">🇸🇪 SV</option>
+        <select style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:8px;padding:.3rem .6rem;font-size:.8rem;cursor:pointer;outline:none;" id="langSelect" onchange="setLang(this.value);applyLang(this.value);document.documentElement.dir=(this.value==='ar'?'rtl':'ltr')">
+          <option value="en">🇬🇧 EN</option><option value="ar">🇸🇦 AR</option><option value="fr">🇫🇷 FR</option><option value="es">🇪🇸 ES</option><option value="de">🇩🇪 DE</option><option value="sv">🇸🇪 SV</option>
         </select>
         <button class="logout-btn" onclick="doLogout()" data-i18n="logout">Logout</button>
       </div>
     </div>
-
     <div class="content">
 
-      <!-- ── TAB: CUSTOMIZE ─────────────────────────── -->
+      <!-- TAB: CUSTOMIZE -->
       <div class="tab-content active" id="tab-customize">
-        <div class="glass" style="margin-bottom:1.5rem;">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.5rem;">🎨 <span data-i18n="tab_custom">Customize</span> Your Brand</h2>
-
-          <!-- Logo Upload -->
+        <div class="glass">
+          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.5rem;">&#127912; <span data-i18n="tab_custom">Customize</span> Your Brand</h2>
           <div style="margin-bottom:1.5rem;">
             <label class="form-label" data-i18n="logo">Store Logo</label>
             <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-              <div id="logoPreviewWrap" style="display:none;">
-                <img id="logoPreviewImg" class="logo-preview" src="" alt="Logo"/>
-              </div>
+              <div id="logoPreviewWrap" style="display:none;"><img id="logoPreviewImg" class="logo-preview" src="" alt="Logo"/></div>
               <div>
                 <label class="logo-upload-area" for="logoFileInput" style="display:block;min-width:200px;">
-                  <div style="font-size:2rem;margin-bottom:.5rem;">📷</div>
+                  <div style="font-size:2rem;margin-bottom:.5rem;">&#128247;</div>
                   <div style="font-size:.875rem;color:#94a3b8;" data-i18n="upload_logo">Upload Logo</div>
-                  <div style="font-size:.75rem;color:#475569;margin-top:.25rem;">PNG, JPG, SVG · Max 2MB</div>
+                  <div style="font-size:.75rem;color:#475569;margin-top:.25rem;">PNG, JPG, SVG &middot; Max 2MB</div>
                 </label>
                 <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoChange(event)"/>
               </div>
             </div>
           </div>
-
-          <div class="grid-2">
-            <!-- Store Name -->
-            <div>
-              <label class="form-label" data-i18n="store_name_label">Store Name</label>
-              <input class="form-input" type="text" id="storeName" placeholder="My Store"/>
-            </div>
-            <!-- Bot Name -->
-            <div>
-              <label class="form-label" data-i18n="bot_name">Bot Name</label>
-              <input class="form-input" type="text" id="botName" placeholder="B-Chat Assistant"/>
-            </div>
+          <div class="grid-2" style="margin-bottom:1.25rem;">
+            <div><label class="form-label" data-i18n="store_name_label">Store Name</label><input class="form-input" type="text" id="storeName" placeholder="My Store"/></div>
+            <div><label class="form-label" data-i18n="bot_name">Bot Name</label><input class="form-input" type="text" id="botName" placeholder="B-Chat Assistant"/></div>
           </div>
-
-          <!-- Bio -->
-          <div style="margin-top:1.25rem;">
+          <div style="margin-bottom:1.25rem;">
             <label class="form-label" data-i18n="bio">Store Description</label>
-            <input class="form-input" type="text" id="storeBio" data-i18n-placeholder="bio_placeholder" placeholder="Brief description of your store..."/>
+            <input class="form-input" type="text" id="storeBio" data-i18n-placeholder="bio_placeholder" placeholder="Brief description shown on the chat welcome page..."/>
           </div>
-
-          <!-- Theme Color -->
-          <div style="margin-top:1.25rem;">
+          <div style="margin-bottom:1.75rem;">
             <label class="form-label" data-i18n="theme_color">Brand Color</label>
             <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
               <div class="color-swatch" style="background:#6366f1;" onclick="selectColor('#6366f1',this)" data-color="#6366f1"></div>
@@ -348,220 +179,231 @@
               <div class="color-swatch" style="background:#f59e0b;" onclick="selectColor('#f59e0b',this)" data-color="#f59e0b"></div>
               <div class="color-swatch" style="background:#3b82f6;" onclick="selectColor('#3b82f6',this)" data-color="#3b82f6"></div>
               <div class="color-swatch" style="background:#ef4444;" onclick="selectColor('#ef4444',this)" data-color="#ef4444"></div>
-              <input type="color" id="customColorPicker" value="#6366f1" oninput="selectColor(this.value,null)" title="Custom Color"/>
+              <input type="color" id="customColorPicker" value="#6366f1" oninput="selectColor(this.value,null)" title="Custom Color" style="width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;padding:0;background:none;"/>
             </div>
           </div>
-
-          <div style="margin-top:1.75rem;display:flex;gap:.75rem;">
-            <button class="btn-primary" onclick="saveCustomize()" id="saveCustomizeBtn" data-i18n="save">Save Changes</button>
-          </div>
+          <button class="btn-primary" onclick="saveCustomize()" id="saveCustomizeBtn" data-i18n="save">Save Changes</button>
         </div>
       </div>
 
-      <!-- ── TAB: BRAIN ──────────────────────────────── -->
+      <!-- TAB: BRAIN — FULLY STRUCTURED -->
       <div class="tab-content" id="tab-brain">
+
+        <!-- Section 1: Store Info -->
         <div class="glass">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">🧠 <span data-i18n="tab_brain">Brain</span></h2>
-          <p style="font-size:.875rem;color:#64748b;margin-bottom:1.5rem;">Everything in "Products & Info" becomes your bot's knowledge. "Custom Instructions" shapes its personality and behavior.</p>
-
-          <div style="margin-bottom:1.5rem;">
-            <label class="form-label" data-i18n="products_info">Products & Info</label>
-            <textarea class="form-textarea" id="productsInfo" style="min-height:220px;" data-i18n-placeholder="products_placeholder" placeholder="List your products, services, prices, policies..."></textarea>
-            <p style="font-size:.75rem;color:#475569;margin-top:.4rem;">💡 Be as detailed as possible. Include prices, features, FAQs, return policy, delivery times, etc.</p>
+          <div class="section-hdr">
+            <div>
+              <div class="section-title">&#127978; Store Info</div>
+              <div class="section-sub">&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1593;&#1575;&#1605;&#1577; &mdash; &#1603;&#1578;&#1587;&#1575;&#1593;&#1583; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1610;&#1578;&#1593;&#1585;&#1601; &#1593;&#1604;&#1609; &#1606;&#1588;&#1575;&#1591;&#1603; &#1575;&#1604;&#1578;&#1580;&#1575;&#1585;&#1610;</div>
+            </div>
           </div>
-
-          <div style="margin-bottom:1.5rem;">
-            <label class="form-label" data-i18n="custom_prompt">Custom Behavior Instructions</label>
-            <textarea class="form-textarea" id="customPrompt" style="min-height:140px;" data-i18n-placeholder="prompt_placeholder" placeholder="e.g. Always respond in Arabic. Be friendly. Focus on selling X."></textarea>
-            <p style="font-size:.75rem;color:#475569;margin-top:.4rem;">💡 Examples: "Always respond in the customer's language", "Ask for the customer's phone number before answering", "Never discuss competitors".</p>
+          <div class="grid-3" style="margin-bottom:1.25rem;">
+            <div>
+              <label class="form-label">&#1606;&#1608;&#1593; &#1575;&#1604;&#1606;&#1588;&#1575;&#1591;</label>
+              <select class="form-select" id="businessType">
+                <option value="">&#1575;&#1582;&#1578;&#1585;...</option>
+                <option value="&#1605;&#1604;&#1575;&#1576;&#1587; &#1606;&#1587;&#1575;&#1574;&#1610;&#1577;">&#1605;&#1604;&#1575;&#1576;&#1587; &#1606;&#1587;&#1575;&#1574;&#1610;&#1577; &#128261;</option>
+                <option value="&#1605;&#1604;&#1575;&#1576;&#1587; &#1585;&#1580;&#1575;&#1604;&#1610;&#1577;">&#1605;&#1604;&#1575;&#1576;&#1587; &#1585;&#1580;&#1575;&#1604;&#1610;&#1577; &#128084;</option>
+                <option value="&#1571;&#1581;&#1584;&#1610;&#1577;">&#1571;&#1581;&#1584;&#1610;&#1577; &#128095;</option>
+                <option value="&#1573;&#1603;&#1587;&#1587;&#1608;&#1575;&#1585;&#1575;&#1578;">&#1573;&#1603;&#1587;&#1587;&#1608;&#1575;&#1585;&#1575;&#1578; &#128141;</option>
+                <option value="&#1593;&#1591;&#1608;&#1585;">&#1593;&#1591;&#1608;&#1585; &#127800;</option>
+                <option value="&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;&#1575;&#1578;">&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;&#1575;&#1578; &#128241;</option>
+                <option value="&#1605;&#1587;&#1578;&#1581;&#1590;&#1585;&#1575;&#1578; &#1578;&#1580;&#1605;&#1610;&#1604;">&#1605;&#1587;&#1578;&#1581;&#1590;&#1585;&#1575;&#1578; &#1578;&#1580;&#1605;&#1610;&#1604; &#128132;</option>
+                <option value="&#1571;&#1579;&#1575;&#1579; &#1605;&#1606;&#1586;&#1604;">&#1571;&#1579;&#1575;&#1579; &#1605;&#1606;&#1586;&#1604; &#128763;</option>
+                <option value="&#1571;&#1594;&#1584;&#1610;&#1577;">&#1571;&#1594;&#1584;&#1610;&#1577; &#127869;</option>
+                <option value="&#1582;&#1583;&#1605;&#1575;&#1578;">&#1582;&#1583;&#1605;&#1575;&#1578; &#128296;</option>
+                <option value="&#1571;&#1582;&#1585;&#1609;">&#1571;&#1582;&#1585;&#1609;</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">&#1575;&#1604;&#1605;&#1583;&#1610;&#1606;&#1577; &#1575;&#1604;&#1585;&#1574;&#1610;&#1587;&#1610;&#1577;</label>
+              <input class="form-input" type="text" id="mainCity" placeholder="&#1605;&#1579;&#1575;&#1604;: &#1591;&#1606;&#1580;&#1577;"/>
+            </div>
+            <div>
+              <label class="form-label">&#1571;&#1587;&#1604;&#1608;&#1576; &#1575;&#1604;&#1585;&#1583;&#1608;&#1583;</label>
+              <select class="form-select" id="toneOfVoice">
+                <option value="friendly">&#1608;&#1583;&#1608;&#1583; &#128522;</option>
+                <option value="professional">&#1575;&#1581;&#1578;&#1585;&#1575;&#1601;&#1610; &#128188;</option>
+                <option value="casual">&#1594;&#1610;&#1585; &#1585;&#1587;&#1605;&#1610; &#128526;</option>
+                <option value="energetic">&#1581;&#1610;&#1608;&#1610; &#9889;</option>
+              </select>
+            </div>
           </div>
+          <div>
+            <label class="form-label" data-i18n="custom_prompt">&#1578;&#1593;&#1604;&#1610;&#1605;&#1575;&#1578; &#1573;&#1590;&#1575;&#1601;&#1610;&#1577; (&#1575;&#1582;&#1578;&#1610;&#1575;&#1585;&#1610;)</label>
+            <textarea class="form-textarea" id="customPrompt" placeholder="&#1605;&#1579;&#1575;&#1604;: &#1583;&#1575;&#1610;&#1605;&#1575; &#1575;&#1591;&#1604;&#1576; &#1585;&#1602;&#1605; &#1575;&#1604;&#1607;&#1575;&#1578;&#1601; &#1601;&#1610; &#1606;&#1607;&#1575;&#1610;&#1577; &#1575;&#1604;&#1605;&#1581;&#1575;&#1583;&#1579;&#1577; &#183; &#1604;&#1575; &#1578;&#1580;&#1575;&#1608;&#1576; &#1593;&#1604;&#1609; &#1575;&#1604;&#1605;&#1606;&#1575;&#1601;&#1587;&#1610;&#1606;"></textarea>
+            <p style="font-size:.72rem;color:#475569;margin-top:.35rem;">&#128161; &#1607;&#1584;&#1607; &#1575;&#1604;&#1578;&#1593;&#1604;&#1610;&#1605;&#1575;&#1578; &#1578;&#1581;&#1583;&#1583; &#1588;&#1582;&#1589;&#1610;&#1577; &#1608;&#1605;&#1607;&#1605;&#1577; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578;.</p>
+          </div>
+        </div>
 
-          <button class="btn-primary" onclick="saveBrain()" id="saveBrainBtn" data-i18n="save">Save Changes</button>
+        <!-- Section 2: Shipping Zones Repeater -->
+        <div class="glass">
+          <div class="section-hdr">
+            <div>
+              <div class="section-title">&#128666; &#1605;&#1606;&#1575;&#1591;&#1602; &#1575;&#1604;&#1578;&#1608;&#1589;&#1610;&#1604;</div>
+              <div class="section-sub">&#1571;&#1590;&#1601; &#1575;&#1604;&#1605;&#1583;&#1606; &#1608;&#1587;&#1593;&#1585; &#1575;&#1604;&#1578;&#1608;&#1589;&#1610;&#1604; &mdash; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1603;&#1610;&#1581;&#1587;&#1576; &#1578;&#1604;&#1602;&#1575;&#1574;&#1610;&#1575;&#1611;</div>
+            </div>
+            <button class="btn-add-sm" onclick="addShippingRow()">+ &#1573;&#1590;&#1575;&#1601;&#1577; &#1605;&#1583;&#1610;&#1606;&#1577;</button>
+          </div>
+          <div class="repeater-list" id="shippingList"></div>
+          <button class="btn-add" onclick="addShippingRow()" id="addShippingBtn">+ &#1571;&#1590;&#1601; &#1605;&#1583;&#1610;&#1606;&#1577; &#1578;&#1608;&#1589;&#1610;&#1604;</button>
+          <div class="alert alert-info" style="margin-top:1rem;">&#128161; <strong>&#1605;&#1579;&#1575;&#1604;:</strong> &#1591;&#1606;&#1580;&#1577; &mdash; 20 &#1583;&#1585;&#1607;&#1605; &nbsp;&#183;&nbsp; &#1575;&#1604;&#1583;&#1575;&#1585; &#1575;&#1604;&#1576;&#1610;&#1590;&#1575;&#1569; &mdash; 35 &#1583;&#1585;&#1607;&#1605; &nbsp;&#183;&nbsp; &#1601;&#1575;&#1587; &mdash; 25 &#1583;&#1585;&#1607;&#1605;</div>
+        </div>
+
+        <!-- Section 3: Product Catalog Repeater -->
+        <div class="glass">
+          <div class="section-hdr">
+            <div>
+              <div class="section-title">&#128717; &#1603;&#1578;&#1575;&#1604;&#1608;&#1580; &#1575;&#1604;&#1605;&#1606;&#1578;&#1580;&#1575;&#1578;</div>
+              <div class="section-sub">&#1571;&#1590;&#1601; &#1605;&#1606;&#1578;&#1580;&#1575;&#1578;&#1603; &mdash; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1603;&#1610;&#1580;&#1575;&#1608;&#1576; &#1593;&#1604;&#1609; &#1575;&#1604;&#1571;&#1587;&#1593;&#1575;&#1585; &#1608;&#1575;&#1604;&#1605;&#1608;&#1575;&#1589;&#1601;&#1575;&#1578;</div>
+            </div>
+            <button class="btn-add-sm" onclick="addProductRow()">+ &#1573;&#1590;&#1575;&#1601;&#1577; &#1605;&#1606;&#1578;&#1580;</button>
+          </div>
+          <div class="repeater-list" id="productList"></div>
+          <button class="btn-add" onclick="addProductRow()" id="addProductBtn">+ &#1571;&#1590;&#1601; &#1605;&#1606;&#1578;&#1580; &#1580;&#1583;&#1610;&#1583;</button>
+          <div class="alert alert-info" style="margin-top:1rem;">&#128161; <strong>&#1605;&#1579;&#1575;&#1604;:</strong> &#1585;&#1608;&#1576; &#1581;&#1605;&#1585;&#1575;&#1569; &mdash; 299 &#1583;&#1585;&#1607;&#1605; &mdash; &#1605;&#1578;&#1608;&#1601;&#1585;&#1577; &#1601;&#1610; S/M/L&#1548; &#1604;&#1608;&#1606; &#1571;&#1581;&#1605;&#1585; &#1608;&#1571;&#1576;&#1610;&#1590;</div>
+        </div>
+
+        <!-- Save section -->
+        <div class="glass">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;">
+            <div>
+              <div class="section-title">&#128190; &#1581;&#1601;&#1592; &#1575;&#1604;&#1584;&#1575;&#1603;&#1585;&#1577;</div>
+              <div class="section-sub">&#1580;&#1605;&#1610;&#1593; &#1575;&#1604;&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1603;&#1578;&#1578;&#1581;&#1608;&#1604; &#1573;&#1604;&#1609; JSON &#1608;&#1578;&#1615;&#1581;&#1601;&#1592; &#1601;&#1610; &#1602;&#1575;&#1593;&#1583;&#1577; &#1575;&#1604;&#1576;&#1610;&#1575;&#1606;&#1575;&#1578;</div>
+            </div>
+            <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+              <button class="btn-outline" onclick="toggleJsonPreview()" style="font-size:.8rem;">&#128065; &#1605;&#1593;&#1575;&#1610;&#1606;&#1577; JSON</button>
+              <button class="btn-primary" onclick="saveBrain()" id="saveBrainBtn" data-i18n="save">&#128190; &#1581;&#1601;&#1592; &#1575;&#1604;&#1578;&#1594;&#1610;&#1610;&#1585;&#1575;&#1578;</button>
+            </div>
+          </div>
+          <pre class="json-preview" id="jsonPreview"></pre>
         </div>
       </div>
 
-      <!-- ── TAB: ANALYTICS ──────────────────────────── -->
+      <!-- TAB: ANALYTICS -->
       <div class="tab-content" id="tab-analytics">
         <div class="stat-grid">
-          <div class="stat-card">
-            <div class="s-label" data-i18n="msgs_left">Messages Left</div>
-            <div class="s-value" id="statsMessages">—</div>
-            <div class="progress-track"><div class="progress-fill" id="msgProgress" style="width:100%"></div></div>
-            <div class="s-sub">out of 1,000</div>
-          </div>
-          <div class="stat-card">
-            <div class="s-label" data-i18n="days_left">Days Left</div>
-            <div class="s-value" id="statsDays">—</div>
-            <div class="progress-track"><div class="progress-fill" id="daysProgress" style="width:100%;background:linear-gradient(90deg,#10b981,#059669)"></div></div>
-            <div class="s-sub" id="subExpires">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="s-label">Total Conversations</div>
-            <div class="s-value" id="statsConvs">—</div>
-            <div class="s-sub">All time</div>
-          </div>
+          <div class="stat-card"><div class="s-label" data-i18n="msgs_left">Messages Left</div><div class="s-value" id="statsMessages">&#8212;</div><div class="progress-track"><div class="progress-fill" id="msgProgress" style="width:100%"></div></div><div class="s-sub">out of 1,000</div></div>
+          <div class="stat-card"><div class="s-label" data-i18n="days_left">Days Left</div><div class="s-value" id="statsDays">&#8212;</div><div class="progress-track"><div class="progress-fill" id="daysProgress" style="width:100%;background:linear-gradient(90deg,#10b981,#059669)"></div></div><div class="s-sub" id="subExpires">&#8212;</div></div>
+          <div class="stat-card"><div class="s-label">Conversations</div><div class="s-value" id="statsConvs">&#8212;</div><div class="s-sub">All time</div></div>
         </div>
-
         <div class="glass">
-          <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.25rem;">📈 Usage Overview</h3>
+          <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.25rem;">&#128200; Usage Overview</h3>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-            <div class="glass-dark">
-              <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Message Balance</div>
-              <div style="display:flex;align-items:baseline;gap:.3rem;">
-                <span style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:#a5b4fc;" id="balanceBig">—</span>
-                <span style="font-size:.8rem;color:#475569;">/ 1000</span>
-              </div>
-            </div>
-            <div class="glass-dark">
-              <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Subscription Ends</div>
-              <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#6ee7b7;" id="subEndBig">—</div>
-            </div>
+            <div class="glass-dark"><div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Message Balance</div><div style="display:flex;align-items:baseline;gap:.3rem;"><span style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:#a5b4fc;" id="balanceBig">&#8212;</span><span style="font-size:.8rem;color:#475569;">/ 1000</span></div></div>
+            <div class="glass-dark"><div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Subscription Ends</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#6ee7b7;" id="subEndBig">&#8212;</div></div>
           </div>
-
-          <div style="margin-top:1.25rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-              <span style="font-size:.85rem;color:#94a3b8;">Message Usage</span>
-              <span style="font-size:.85rem;color:#a5b4fc;" id="usagePercent">0%</span>
-            </div>
-            <div class="progress-track" style="height:10px;">
-              <div class="progress-fill" id="usageBar" style="width:0%"></div>
-            </div>
-          </div>
+          <div style="margin-top:1.25rem;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;"><span style="font-size:.85rem;color:#94a3b8;">Message Usage</span><span style="font-size:.85rem;color:#a5b4fc;" id="usagePercent">0%</span></div><div class="progress-track" style="height:10px;"><div class="progress-fill" id="usageBar" style="width:0%"></div></div></div>
         </div>
       </div>
 
-      <!-- ── TAB: DEPLOY ─────────────────────────────── -->
+      <!-- TAB: DEPLOY -->
       <div class="tab-content" id="tab-deploy">
         <div class="glass">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">🔗 Deploy Your Bot</h2>
-          <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Share your unique chat link anywhere — Instagram bio, website, WhatsApp, email signatures.</p>
-
-          <div style="margin-bottom:1.5rem;">
-            <label class="form-label" data-i18n="copy_link">Your Chat Link</label>
-            <div class="link-box">
-              <span class="link-url" id="chatLinkUrl">Loading...</span>
-              <button class="btn-outline" onclick="copyLink()" id="copyLinkBtn" data-i18n="copy_link">Copy My Link</button>
-            </div>
-          </div>
-
-          <div style="margin-bottom:1.5rem;">
-            <label class="form-label">Embed Code</label>
-            <div class="link-box" style="flex-direction:column;align-items:flex-start;gap:.75rem;">
-              <code id="embedCode" style="font-size:.75rem;color:#94a3b8;word-break:break-all;line-height:1.6;background:rgba(0,0,0,.3);padding:.75rem;border-radius:8px;width:100%;"></code>
-              <button class="btn-outline" onclick="copyEmbed()" style="font-size:.8rem;padding:.5rem 1rem;">Copy Embed Code</button>
-            </div>
-          </div>
-
-          <div class="alert alert-info">
-            💡 <strong>Pro tip:</strong> Add this link to your Instagram bio, WhatsApp Business auto-reply, or any website button to start getting AI-powered conversations instantly.
-          </div>
+          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">&#128279; Deploy Your Bot</h2>
+          <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Share your unique chat link anywhere &#8212; Instagram bio, website, WhatsApp, email signatures.</p>
+          <div style="margin-bottom:1.5rem;"><label class="form-label" data-i18n="copy_link">Your Chat Link</label><div class="link-box"><span class="link-url" id="chatLinkUrl">Loading...</span><button class="btn-outline" onclick="copyLink()" id="copyLinkBtn" data-i18n="copy_link">Copy My Link</button></div></div>
+          <div style="margin-bottom:1.5rem;"><label class="form-label">Embed Code</label><div class="link-box" style="flex-direction:column;align-items:flex-start;gap:.75rem;"><code id="embedCode" style="font-size:.75rem;color:#94a3b8;word-break:break-all;line-height:1.6;background:rgba(0,0,0,.3);padding:.75rem;border-radius:8px;width:100%;"></code><button class="btn-outline" onclick="copyEmbed()" style="font-size:.8rem;padding:.5rem 1rem;">Copy Embed Code</button></div></div>
+          <div class="alert alert-info">&#128161; <strong>&#1606;&#1589;&#1610;&#1581;&#1577;:</strong> &#1586;&#1610;&#1583; &#1575;&#1604;&#1585;&#1575;&#1576;&#1591; &#1601;&#1610; &#1576;&#1610;&#1608; &#1575;&#1604;&#1575;&#1606;&#1587;&#1578;&#1594;&#1585;&#1575;&#1605; &#1583;&#1610;&#1575;&#1604;&#1603;&#1548; &#1571;&#1608; &#1601;&#1610; &#1585;&#1587;&#1575;&#1604;&#1577; &#1575;&#1604;&#1585;&#1583; &#1575;&#1604;&#1578;&#1604;&#1602;&#1575;&#1574;&#1610; &#1601;&#1610; &#1608;&#1575;&#1578;&#1587;&#1575;&#1576; &#1576;&#1610;&#1586;&#1606;&#1587;.</div>
         </div>
       </div>
 
-      <!-- ── TAB: BILLING ────────────────────────────── -->
+      <!-- TAB: BILLING -->
       <div class="tab-content" id="tab-billing">
         <div class="glass" style="margin-bottom:1.5rem;">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">💳 <span data-i18n="tab_billing">Billing</span></h2>
+          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">&#128179; <span data-i18n="tab_billing">Billing</span></h2>
           <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Redeem an activation code to top up your message balance by 1,000 messages.</p>
-
-          <div style="display:flex;gap:.75rem;max-width:480px;">
-            <input class="form-input" type="text" id="activationCode" data-i18n-placeholder="redeem_placeholder" placeholder="Enter activation code" style="text-transform:uppercase;"/>
-            <button class="btn-success" onclick="redeemCode()" id="redeemBtn" data-i18n="redeem_code" style="white-space:nowrap;">Redeem Code</button>
-          </div>
+          <div style="display:flex;gap:.75rem;max-width:480px;"><input class="form-input" type="text" id="activationCode" data-i18n-placeholder="redeem_placeholder" placeholder="Enter activation code" style="text-transform:uppercase;"/><button class="btn-success" onclick="redeemCode()" id="redeemBtn" data-i18n="redeem_code" style="white-space:nowrap;">Redeem Code</button></div>
           <div id="redeemMsg" style="margin-top:.75rem;"></div>
         </div>
-
         <div class="glass">
           <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1rem;">Current Balance</h3>
           <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-            <div style="text-align:center;">
-              <div style="font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="billingBalance">—</div>
-              <div style="font-size:.8rem;color:#475569;" data-i18n="msgs_left">messages left</div>
-            </div>
-            <div style="flex:1;min-width:200px;">
-              <div class="progress-track" style="height:12px;">
-                <div class="progress-fill" id="billingProgress"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.75rem;color:#475569;">
-                <span>0</span><span>1,000</span>
-              </div>
-            </div>
+            <div style="text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="billingBalance">&#8212;</div><div style="font-size:.8rem;color:#475569;" data-i18n="msgs_left">messages left</div></div>
+            <div style="flex:1;min-width:200px;"><div class="progress-track" style="height:12px;"><div class="progress-fill" id="billingProgress"></div></div><div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.75rem;color:#475569;"><span>0</span><span>1,000</span></div></div>
           </div>
         </div>
       </div>
 
     </div><!-- /content -->
   </main>
-</div>
+</div><!-- /app -->
 
 <script>
 const sb = createSupabase();
-let profile = null;
-let userId  = null;
+let profile       = null;
+let userId        = null;
 let selectedColor = '#6366f1';
 let pendingLogoFile = null;
+let shippingCounter = 0;
+let productCounter  = 0;
 
-const TAB_TITLES = {
-  customize: 'tab_custom',
-  brain:     'tab_brain',
-  analytics: 'tab_analytics',
-  deploy:    'tab_deploy',
-  billing:   'tab_billing',
-};
+const TAB_TITLES = { customize:'tab_custom', brain:'tab_brain', analytics:'tab_analytics', deploy:'tab_deploy', billing:'tab_billing' };
 
-// ── INIT ─────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   const lang = getLang();
   document.getElementById('langSelect').value = lang;
   applyLang(lang);
-  document.getElementById('langSelect').addEventListener('change', function(){ setLang(this.value); applyLang(this.value); });
-
-  const { data: { session } } = await sb.auth.getSession();
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+  document.getElementById('langSelect').addEventListener('change', function(){
+    setLang(this.value); applyLang(this.value);
+    document.documentElement.dir = (this.value === 'ar') ? 'rtl' : 'ltr';
+  });
+  const { data:{ session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'index.html'; return; }
   userId = session.user.id;
-
   await loadProfile();
   populateForms();
   loadAnalytics();
   setupDeployTab();
+  const sd = profile?.structured_data || {};
+  if (!sd.products?.length && !profile?.products_info) {
+    setTimeout(() => showToast('\u{1F4A1} \u0627\u0628\u062F\u0623 \u0628\u062A\u0639\u0628\u0626\u0629 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0631\u0648\u0628\u0648\u062A \u0641\u064A \u062A\u0627\u0628 "Brain"!'), 1200);
+  }
 });
 
-// ── LOAD PROFILE ─────────────────────────────────────────
+// ── LOAD PROFILE ──────────────────────────────────────────────
 async function loadProfile() {
   const { data, error } = await sb.from('profiles').select('*').eq('id', userId).single();
-  if (error || !data) { showToast('Failed to load profile', true); return; }
+  if (error || !data) { showToast('\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.', true); return; }
   profile = data;
 }
 
-// ── POPULATE FORMS ────────────────────────────────────────
+// ── POPULATE FORMS ────────────────────────────────────────────
 function populateForms() {
   if (!profile) return;
-  document.getElementById('storeName').value   = profile.store_name || '';
-  document.getElementById('botName').value     = profile.bot_name   || '';
-  document.getElementById('storeBio').value    = profile.bio        || '';
-  document.getElementById('productsInfo').value = profile.products_info || '';
-  document.getElementById('customPrompt').value = profile.custom_prompt || '';
-
-  // Logo
+  document.getElementById('storeName').value = profile.store_name || '';
+  document.getElementById('botName').value   = profile.bot_name   || '';
+  document.getElementById('storeBio').value  = profile.bio        || '';
   if (profile.logo_url) {
     document.getElementById('logoPreviewImg').src = profile.logo_url;
     document.getElementById('logoPreviewWrap').style.display = 'block';
-    const av = document.getElementById('sidebarAvatar');
-    av.innerHTML = `<img src="${profile.logo_url}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+    document.getElementById('sidebarAvatar').innerHTML = `<img src="${profile.logo_url}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
   }
-
-  // Color
   selectedColor = profile.theme_color || '#6366f1';
   document.getElementById('customColorPicker').value = selectedColor;
-  document.querySelectorAll('.color-swatch').forEach(sw => {
-    sw.classList.toggle('selected', sw.dataset.color === selectedColor);
-  });
-
-  // Sidebar name
+  document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.toggle('selected', sw.dataset.color === selectedColor));
   document.getElementById('sidebarName').textContent = profile.store_name || 'My Store';
+
+  // ── Brain structured data ──
+  const sd = profile.structured_data || {};
+  const bd = sd.business_details || {};
+  document.getElementById('businessType').value = bd.business_type || '';
+  document.getElementById('mainCity').value      = bd.main_city     || '';
+  document.getElementById('toneOfVoice').value   = bd.tone_of_voice || 'friendly';
+  document.getElementById('customPrompt').value  = profile.custom_prompt || '';
+
+  const zones = sd.shipping_zones || [];
+  if (zones.length) { zones.forEach(z => addShippingRow(z.city, z.price)); }
+  else              { addShippingRow(); }
+
+  const prods = sd.products || [];
+  if (prods.length) { prods.forEach(p => addProductRow(p.name, p.price, p.description)); }
+  else              { addProductRow(); }
 }
 
-// ── SHOW TAB ──────────────────────────────────────────────
+// ── SHOW TAB ──────────────────────────────────────────────────
 function showTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -571,9 +413,10 @@ function showTab(name) {
   document.getElementById('tabTitle').textContent = t(TAB_TITLES[name]);
   if (name === 'analytics') loadAnalytics();
   if (name === 'deploy')    setupDeployTab();
+  if (name === 'billing')   updateBillingDisplay();
 }
 
-// ── COLOR PICKER ──────────────────────────────────────────
+// ── COLOR ─────────────────────────────────────────────────────
 function selectColor(color, el) {
   selectedColor = color;
   document.getElementById('customColorPicker').value = color;
@@ -581,11 +424,11 @@ function selectColor(color, el) {
   if (el) el.classList.add('selected');
 }
 
-// ── LOGO CHANGE ───────────────────────────────────────────
+// ── LOGO ──────────────────────────────────────────────────────
 function handleLogoChange(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { showToast('File too large. Max 2MB.', true); return; }
+  if (file.size > 2 * 1024 * 1024) { showToast('\u0627\u0644\u0645\u0644\u0641 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB.', true); return; }
   pendingLogoFile = file;
   const reader = new FileReader();
   reader.onload = e => {
@@ -595,73 +438,157 @@ function handleLogoChange(event) {
   reader.readAsDataURL(file);
 }
 
-// ── SAVE CUSTOMIZE ────────────────────────────────────────
+// ── SAVE CUSTOMIZE ────────────────────────────────────────────
 async function saveCustomize() {
   const btn = document.getElementById('saveCustomizeBtn');
   btn.textContent = '...'; btn.disabled = true;
-
   let logoUrl = profile.logo_url;
-
-  // Upload logo if changed
   if (pendingLogoFile) {
     const ext  = pendingLogoFile.name.split('.').pop();
     const path = `${userId}/logo.${ext}`;
-    const { error: upErr } = await sb.storage.from('logos').upload(path, pendingLogoFile, { upsert: true });
+    const { error: upErr } = await sb.storage.from('logos').upload(path, pendingLogoFile, { upsert:true });
     if (!upErr) {
       const { data: urlData } = sb.storage.from('logos').getPublicUrl(path);
       logoUrl = urlData.publicUrl;
     }
   }
-
   const updates = {
-    store_name:  document.getElementById('storeName').value.trim(),
-    bot_name:    document.getElementById('botName').value.trim(),
-    bio:         document.getElementById('storeBio').value.trim(),
+    store_name: document.getElementById('storeName').value.trim(),
+    bot_name:   document.getElementById('botName').value.trim(),
+    bio:        document.getElementById('storeBio').value.trim(),
     theme_color: selectedColor,
-    logo_url:    logoUrl,
+    logo_url:   logoUrl,
   };
-
   const { error } = await sb.from('profiles').update(updates).eq('id', userId);
   btn.textContent = t('save'); btn.disabled = false;
-
-  if (error) { showToast('Failed to save. Try again.', true); return; }
+  if (error) { showToast('\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.', true); return; }
   profile = { ...profile, ...updates };
   document.getElementById('sidebarName').textContent = updates.store_name;
   showToast(t('saved'));
   pendingLogoFile = null;
 }
 
-// ── SAVE BRAIN ────────────────────────────────────────────
+// ── SHIPPING REPEATER ─────────────────────────────────────────
+function addShippingRow(city = '', price = '') {
+  shippingCounter++;
+  const id  = `ship_${shippingCounter}`;
+  const row = document.createElement('div');
+  row.className = 'repeater-row';
+  row.id = id;
+  row.innerHTML = `
+    <div class="row-grid-ship">
+      <div>
+        <label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0645\u062F\u064A\u0646\u0629</label>
+        <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0637\u0646\u062C\u0629" value="${escAttr(city)}" data-field="city"/>
+      </div>
+      <div>
+        <label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0633\u0639\u0631 (\u062F\u0631\u0647\u0645)</label>
+        <input class="form-input" type="number" placeholder="30" min="0" value="${escAttr(price)}" data-field="price"/>
+      </div>
+      <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+        <button class="btn-remove" onclick="removeRow('${id}')" title="\u062D\u0630\u0641">&times;</button>
+      </div>
+    </div>`;
+  document.getElementById('shippingList').appendChild(row);
+}
+
+// ── PRODUCT REPEATER ──────────────────────────────────────────
+function addProductRow(name = '', price = '', description = '') {
+  productCounter++;
+  const id  = `prod_${productCounter}`;
+  const row = document.createElement('div');
+  row.className = 'repeater-row';
+  row.id = id;
+  row.innerHTML = `
+    <div class="row-grid-prod">
+      <div>
+        <label class="form-label" style="font-size:.7rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C</label>
+        <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0631\u0648\u0628 \u062D\u0645\u0631\u0627\u0621" value="${escAttr(name)}" data-field="name"/>
+      </div>
+      <div>
+        <label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0633\u0639\u0631 (\u062F\u0631\u0647\u0645)</label>
+        <input class="form-input" type="number" placeholder="299" min="0" value="${escAttr(price)}" data-field="price"/>
+      </div>
+      <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+        <button class="btn-remove" onclick="removeRow('${id}')" title="\u062D\u0630\u0641">&times;</button>
+      </div>
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.7rem;">\u0648\u0635\u0641 \u0645\u062E\u062A\u0635\u0631 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
+      <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0645\u062A\u0648\u0641\u0631 \u0641\u064A S/M/L\u060C \u0623\u0644\u0648\u0627\u0646 \u0645\u062A\u0639\u062F\u062F\u0629" value="${escAttr(description)}" data-field="description"/>
+    </div>`;
+  document.getElementById('productList').appendChild(row);
+}
+
+function removeRow(id) { const el = document.getElementById(id); if (el) el.remove(); }
+
+// ── BUILD JSON ────────────────────────────────────────────────
+function buildStructuredData() {
+  const business_details = {
+    business_type: document.getElementById('businessType').value.trim(),
+    main_city:     document.getElementById('mainCity').value.trim(),
+    tone_of_voice: document.getElementById('toneOfVoice').value,
+  };
+  const shipping_zones = [];
+  document.querySelectorAll('#shippingList .repeater-row').forEach(row => {
+    const city  = row.querySelector('[data-field="city"]')?.value.trim()  || '';
+    const price = row.querySelector('[data-field="price"]')?.value.trim() || '0';
+    if (city) shipping_zones.push({ city, price: Number(price) || 0 });
+  });
+  const products = [];
+  document.querySelectorAll('#productList .repeater-row').forEach(row => {
+    const name        = row.querySelector('[data-field="name"]')?.value.trim()        || '';
+    const price       = row.querySelector('[data-field="price"]')?.value.trim()       || '0';
+    const description = row.querySelector('[data-field="description"]')?.value.trim() || '';
+    if (name) products.push({ name, price: Number(price) || 0, description });
+  });
+  return { business_details, shipping_zones, products };
+}
+
+// ── SAVE BRAIN ────────────────────────────────────────────────
 async function saveBrain() {
   const btn = document.getElementById('saveBrainBtn');
   btn.textContent = '...'; btn.disabled = true;
 
+  const structured_data = buildStructuredData();
+
+  if (!structured_data.products.length) {
+    showToast('\u0623\u0636\u0641 \u0645\u0646\u062A\u062C\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0642\u0628\u0644 \u0627\u0644\u062D\u0641\u0638.', true);
+    btn.textContent = t('save'); btn.disabled = false;
+    return;
+  }
+
   const updates = {
-    products_info: document.getElementById('productsInfo').value,
-    custom_prompt: document.getElementById('customPrompt').value,
+    structured_data,
+    custom_prompt: document.getElementById('customPrompt').value.trim(),
   };
 
   const { error } = await sb.from('profiles').update(updates).eq('id', userId);
   btn.textContent = t('save'); btn.disabled = false;
 
-  if (error) { showToast('Failed to save brain.', true); return; }
+  if (error) { showToast('\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0630\u0627\u0643\u0631\u0629: ' + error.message, true); return; }
+
   profile = { ...profile, ...updates };
-  showToast(t('saved'));
+  const preview = document.getElementById('jsonPreview');
+  if (preview.classList.contains('visible')) { preview.textContent = JSON.stringify(structured_data, null, 2); }
+  showToast('\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0628\u0646\u062C\u0627\u062D!');
 }
 
-// ── ANALYTICS ─────────────────────────────────────────────
+function toggleJsonPreview() {
+  const el = document.getElementById('jsonPreview');
+  if (el.classList.toggle('visible')) { el.textContent = JSON.stringify(buildStructuredData(), null, 2); }
+}
+
+// ── ANALYTICS ─────────────────────────────────────────────────
 async function loadAnalytics() {
   if (!profile) await loadProfile();
   if (!profile) return;
-
   const balance  = profile.message_balance || 0;
   const subEnd   = new Date(profile.sub_end_date);
   const now      = new Date();
-  const diffMs   = subEnd - now;
-  const daysLeft = Math.max(0, Math.ceil(diffMs / 86400000));
+  const daysLeft = Math.max(0, Math.ceil((subEnd - now) / 86400000));
   const pctMsg   = Math.min(100, (balance / 1000) * 100);
   const pctDays  = Math.min(100, (daysLeft / 30) * 100);
-
   document.getElementById('statsMessages').textContent = balance.toLocaleString();
   document.getElementById('statsDays').textContent     = daysLeft;
   document.getElementById('msgProgress').style.width   = pctMsg + '%';
@@ -671,104 +598,78 @@ async function loadAnalytics() {
   document.getElementById('subEndBig').textContent     = subEnd.toLocaleDateString();
   document.getElementById('usagePercent').textContent  = Math.round(100 - pctMsg) + '% used';
   document.getElementById('usageBar').style.width      = (100 - pctMsg) + '%';
-
-  // Conversation count
   const { count } = await sb.from('conversations').select('*', { count:'exact', head:true }).eq('merchant_id', userId);
   document.getElementById('statsConvs').textContent = (count || 0).toLocaleString();
 }
 
-// ── DEPLOY TAB ────────────────────────────────────────────
+// ── DEPLOY ────────────────────────────────────────────────────
 function setupDeployTab() {
-  const chatUrl  = `${BCHAT_CONFIG.BASE_URL}/chat.html?id=${userId}`;
-  const embedCode = `<a href="${chatUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#6366f1;color:#fff;border-radius:12px;text-decoration:none;font-weight:600;">💬 Chat with us</a>`;
+  const chatUrl   = `${BCHAT_CONFIG.BASE_URL}/chat.html?id=${userId}`;
+  const embedCode = `<a href="${chatUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#6366f1;color:#fff;border-radius:12px;text-decoration:none;font-weight:600;">\u{1F4AC} Chat with us</a>`;
   document.getElementById('chatLinkUrl').textContent = chatUrl;
   document.getElementById('embedCode').textContent   = embedCode;
 }
-
 async function copyLink() {
-  const url = `${BCHAT_CONFIG.BASE_URL}/chat.html?id=${userId}`;
-  await navigator.clipboard.writeText(url).catch(() => {});
+  await navigator.clipboard.writeText(`${BCHAT_CONFIG.BASE_URL}/chat.html?id=${userId}`).catch(()=>{});
   const btn = document.getElementById('copyLinkBtn');
   btn.textContent = t('copied');
   setTimeout(() => btn.textContent = t('copy_link'), 2000);
   showToast(t('copied'));
 }
-
 async function copyEmbed() {
-  const code = document.getElementById('embedCode').textContent;
-  await navigator.clipboard.writeText(code).catch(() => {});
+  await navigator.clipboard.writeText(document.getElementById('embedCode').textContent).catch(()=>{});
   showToast(t('copied'));
 }
 
-// ── REDEEM CODE ───────────────────────────────────────────
+// ── BILLING ───────────────────────────────────────────────────
 async function redeemCode() {
   const code = document.getElementById('activationCode').value.trim().toUpperCase();
   if (!code) return;
   const btn = document.getElementById('redeemBtn');
   btn.textContent = '...'; btn.disabled = true;
-
-  const { data: codeRow, error: codeErr } = await sb
-    .from('activation_codes')
-    .select('*')
-    .eq('code', code)
-    .eq('is_used', false)
-    .single();
-
+  const { data: codeRow, error: codeErr } = await sb.from('activation_codes').select('*').eq('code', code).eq('is_used', false).single();
   if (codeErr || !codeRow) {
-    showRedeemMsg('Invalid or already used code.', true);
-    btn.textContent = t('redeem_code'); btn.disabled = false;
-    return;
+    showRedeemMsg('\u0643\u0648\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0645\u0633\u0628\u0642\u0627\u064B.', true);
+    btn.textContent = t('redeem_code'); btn.disabled = false; return;
   }
-
-  // Mark as used
-  await sb.from('activation_codes').update({ is_used: true, used_by: userId, used_at: new Date().toISOString() }).eq('id', codeRow.id);
-
-  // Add messages
+  await sb.from('activation_codes').update({ is_used:true, used_by:userId, used_at:new Date().toISOString() }).eq('id', codeRow.id);
   const newBalance = (profile.message_balance || 0) + codeRow.message_amount;
   const { error: updateErr } = await sb.from('profiles').update({ message_balance: newBalance }).eq('id', userId);
-
   btn.textContent = t('redeem_code'); btn.disabled = false;
-
-  if (updateErr) { showRedeemMsg('Failed to apply code.', true); return; }
+  if (updateErr) { showRedeemMsg('\u0641\u0634\u0644 \u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0643\u0648\u062F.', true); return; }
   profile.message_balance = newBalance;
-  document.getElementById('billingBalance').textContent = newBalance.toLocaleString();
-  document.getElementById('billingProgress').style.width = Math.min(100, (newBalance / 1000) * 100) + '%';
-  showRedeemMsg(`✅ +${codeRow.message_amount.toLocaleString()} messages added! New balance: ${newBalance.toLocaleString()}`, false);
+  updateBillingDisplay();
+  showRedeemMsg(`\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 ${codeRow.message_amount.toLocaleString()} \u0631\u0633\u0627\u0644\u0629! \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062C\u062F\u064A\u062F: ${newBalance.toLocaleString()}`, false);
   document.getElementById('activationCode').value = '';
   loadAnalytics();
 }
-
 function showRedeemMsg(msg, isError) {
   const el = document.getElementById('redeemMsg');
   el.className = `alert ${isError ? 'alert-error' : 'alert-success'}`;
-  el.textContent = msg;
-  el.style.display = 'block';
+  el.textContent = msg; el.style.display = 'block';
 }
-
-// Update billing tab balance on load
-async function updateBillingDisplay() {
+function updateBillingDisplay() {
   if (!profile) return;
   const bal = profile.message_balance || 0;
   document.getElementById('billingBalance').textContent = bal.toLocaleString();
   document.getElementById('billingProgress').style.width = Math.min(100,(bal/1000)*100) + '%';
 }
 
-// ── LOGOUT ────────────────────────────────────────────────
-async function doLogout() {
-  await sb.auth.signOut();
-  window.location.href = 'index.html';
-}
+// ── LOGOUT ────────────────────────────────────────────────────
+async function doLogout() { await sb.auth.signOut(); window.location.href = 'index.html'; }
 
-// ── TOAST ─────────────────────────────────────────────────
+// ── TOAST ─────────────────────────────────────────────────────
 function showToast(msg, isError = false) {
   const el = document.createElement('div');
   el.className = `toast${isError ? ' error' : ''}`;
   el.textContent = msg;
   document.getElementById('toaster').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  setTimeout(() => el.remove(), 3500);
 }
 
-// Load billing display when switching to billing tab
+// ── UTILS ─────────────────────────────────────────────────────
+function escAttr(str) { return (str||'').toString().replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 document.getElementById('nav-billing').addEventListener('click', updateBillingDisplay);
 </script>
 </body>
