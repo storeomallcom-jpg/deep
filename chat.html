@@ -781,7 +781,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadMerchant(mid) {
   const { data, error } = await sb
     .from('profiles')
-    .select('id,store_name,bot_name,logo_url,bio,products_info,custom_prompt,theme_color,sub_end_date,message_balance')
+    .select('id,store_name,bot_name,logo_url,bio,products_info,custom_prompt,theme_color,sub_end_date,message_balance,structured_data')
     .eq('id', mid)
     .single();
 
@@ -1072,9 +1072,24 @@ function cleanAIOutput(raw) {
 
 /* ── BUILD SYSTEM PROMPT ──────────────────────────────── */
 function buildSystemPrompt() {
+  const sd  = merchant.structured_data || {};
+  const bd  = sd.business_details      || {};
+  const zones    = sd.shipping_zones   || [];
+  const products = sd.products         || [];
+
+  // ── Tone mapping ──
+  const toneMap = {
+    friendly:     'ودود ومتقرب',
+    professional: 'احترافي ومحترم',
+    casual:       'غير رسمي وعفوي',
+    energetic:    'حيوي ومتحمس',
+  };
+  const toneDesc = toneMap[bd.tone_of_voice] || 'ودود';
+
+  // ── Language instruction ──
   const langInstructions = {
     ar: `تحدث بالدارجة المغربية (خليط طبيعي من العربية والفرنسية المغربية). إذا تكلم الزبون بلغة أخرى، جاوبه بنفس لغته.`,
-    fr: `Réponds en français. Si le client parle une autre langue, adapte-toi.`,
+    fr: `Réponds en français. Adapte-toi à la langue du client si nécessaire.`,
     en: `Reply in English. Adapt to the customer's language if they switch.`,
     es: `Responde en español. Adáptate al idioma del cliente.`,
     de: `Antworte auf Deutsch. Passe dich der Sprache des Kunden an.`,
@@ -1082,34 +1097,57 @@ function buildSystemPrompt() {
 
   const parts = [
     `أنت ${escHtml(merchant.bot_name || 'مساعد مبيعات')} ديال متجر "${escHtml(merchant.store_name)}".`,
+    `أسلوبك: ${toneDesc}.`,
     ``,
-    `## دورك`,
-    `- أجب على أسئلة الزبائن بخصوص المنتجات والأسعار والتوصيل`,
+    `## مهمتك`,
+    `- أجب على أسئلة الزبائن بدقة بناءً على المعلومات أدناه`,
     `- اقنع الزبون بالشراء — أنت sales closer محترف`,
     `- اطلب رقم الهاتف لتأكيد الطلب في نهاية المحادثة`,
     ``,
     `## اللغة`,
     langInstructions[uiLang] || langInstructions['ar'],
+    `اسم الزبون: ${escHtml(customerName)}.`,
     ``,
     `## قواعد صارمة`,
-    `- لا تقل أبداً أنك AI أو Groq أو نموذج لغوي — أنت مساعد المتجر فقط`,
-    `- ردودك قصيرة ومركزة (2-3 جمل عادةً)`,
-    `- لا تخترع معلومات — إذا ما عندكش جواب قل "غادي نسول وخبرك"`,
-    `- استعمل emojis باعتدال 🛍️`,
-    `- لا تُظهر أي تفكير داخلي أو تحليل — فقط الرد النهائي`,
-    `- اسم الزبون: ${escHtml(customerName)}`,
+    `- لا تقل أبداً أنك AI أو Groq أو نموذج لغوي`,
+    `- لا تخترع أسعاراً أو معلومات غير موجودة في البيانات أدناه`,
+    `- ردودك قصيرة ومركزة (2-3 جمل)`,
+    `- لا تُظهر تفكيراً داخلياً — فقط الرد النهائي`,
   ];
 
-  if (merchant.bio) {
-    parts.push(`\n## المتجر\n${merchant.bio}`);
+  // ── Business details ──
+  if (bd.business_type || bd.main_city) {
+    parts.push(`\n## معلومات المتجر`);
+    if (bd.business_type) parts.push(`- نوع النشاط: ${bd.business_type}`);
+    if (bd.main_city)     parts.push(`- المدينة الرئيسية: ${bd.main_city}`);
+    if (merchant.bio)     parts.push(`- وصف: ${merchant.bio}`);
   }
 
-  if (merchant.products_info) {
+  // ── Products (structured) ──
+  if (products.length) {
+    parts.push(`\n## كتالوج المنتجات`);
+    products.forEach(p => {
+      let line = `- ${p.name}: ${p.price} درهم`;
+      if (p.description) line += ` — ${p.description}`;
+      parts.push(line);
+    });
+  } else if (merchant.products_info) {
+    // Fallback to legacy plain-text field
     parts.push(`\n## المنتجات والمعلومات\n${merchant.products_info}`);
   } else {
-    parts.push(`\n## ملاحظة: صاحب المتجر لم يضف معلومات المنتجات بعد. اطلب منه أن يتصل بك على الواتساب لمعرفة التفاصيل.`);
+    parts.push(`\n## ملاحظة: صاحب المتجر لم يضف معلومات المنتجات بعد. اطلب من الزبون التواصل على الواتساب مباشرة.`);
   }
 
+  // ── Shipping zones (structured) ──
+  if (zones.length) {
+    parts.push(`\n## التوصيل`);
+    zones.forEach(z => {
+      parts.push(`- ${z.city}: ${z.price} درهم`);
+    });
+    parts.push(`(احسب تكلفة التوصيل بدقة حسب المدينة التي يذكرها الزبون)`);
+  }
+
+  // ── Custom prompt (merchant override) ──
   if (merchant.custom_prompt) {
     parts.push(`\n## تعليمات إضافية من صاحب المتجر\n${merchant.custom_prompt}`);
   }
