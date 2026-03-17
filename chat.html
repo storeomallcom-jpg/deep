@@ -488,6 +488,40 @@
     .bubble-wrap { max-width: 82%; }
     .welcome-card { border-radius: 20px; padding: 2rem 1.5rem; }
   }
+
+  /* ── ORDER CONFIRMATION CARD ──────────────────────── */
+  .order-confirm-card {
+    background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(10,15,28,.98));
+    border:1px solid rgba(99,102,241,.35);
+    border-radius:20px;padding:1.25rem;margin:.75rem 0;
+    box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 0 1px rgba(99,102,241,.1);
+    animation:bubbleIn .3s ease both;
+    max-width:90%;
+  }
+  .oc-header { display:flex;align-items:center;gap:.5rem;margin-bottom:1rem; }
+  .oc-icon { font-size:1.2rem; }
+  .oc-title { font-weight:700;color:#f1f5f9;flex:1; }
+  .oc-id { font-size:.7rem;color:#475569;font-family:monospace; }
+  .oc-details { display:flex;flex-direction:column;gap:.35rem;margin-bottom:1rem;padding:.75rem;background:rgba(255,255,255,.03);border-radius:12px; }
+  .oc-row { display:flex;gap:.6rem;font-size:.85rem;color:#94a3b8; }
+  .oc-row span:last-child { color:#e2e8f0; }
+  .oc-items { border-top:1px solid rgba(255,255,255,.06);padding-top:.75rem;margin-bottom:.75rem; }
+  .oc-item { display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;padding:.25rem 0; }
+  .oc-item span:last-child { color:#f1f5f9;font-weight:600; }
+  .oc-total { display:flex;justify-content:space-between;align-items:center;padding:.75rem;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:12px;margin-bottom:1rem; }
+  .oc-total span { font-size:.85rem;color:#a5b4fc; }
+  .oc-total strong { font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:#f1f5f9; }
+  .oc-pay-wrap { text-align:center; }
+  .oc-pay-btn {
+    display:inline-flex;align-items:center;gap:.5rem;
+    padding:.75rem 1.75rem;border-radius:12px;
+    background:linear-gradient(135deg,#6366f1,#a855f7);
+    color:#fff;font-weight:700;font-size:.95rem;text-decoration:none;
+    box-shadow:0 0 24px rgba(99,102,241,.4);transition:all .2s;
+  }
+  .oc-pay-btn:hover { transform:translateY(-1px);box-shadow:0 0 36px rgba(99,102,241,.6); }
+  .oc-pay-note { font-size:.82rem;color:#64748b;text-align:center; }
+
 </style>
 </head>
 <body>
@@ -622,292 +656,207 @@
   JAVASCRIPT
 ════════════════════════════════════════════ -->
 <script>
-/* ── STATE ────────────────────────────────────────────── */
-const sb         = createSupabase();
-let merchant     = null;
-let customerName = 'زبون';
-let convId       = null;
-let chatHistory  = [];      // [{role, content}]
-let isTyping     = false;
-let isBotActive  = true;
-let uiLang       = 'ar';
-let atBottom     = true;
+/* ============================================================
+   B-CHAT — chat.html  v4  (Order-to-Cash Edition)
+   New: saveOrderToSupabase(), sendResendEmail(),
+        ORDER_STATE machine, payment link display
+============================================================ */
+const sb          = createSupabase();
+let merchant      = null;
+let customerName  = '';
+let convId        = null;
+let chatHistory   = [];
+let isTyping      = false;
+let isBotActive   = true;
+let uiLang        = 'ar';
+let atBottom      = true;
 
-/* ── UI COPY ──────────────────────────────────────────── */
+// ── ORDER STATE MACHINE ───────────────────────────────────────
+// Tracks the AI's data-collection progress for an order
+const ORDER_STATE = {
+  idle:        'idle',        // no order in progress
+  collecting:  'collecting',  // gathering name/phone/address
+  confirming:  'confirming',  // showing summary, awaiting confirmation
+  saved:       'saved',       // order written to DB
+};
+let orderState    = ORDER_STATE.idle;
+let pendingOrder  = {          // data collected so far
+  items:    [],
+  name:     '',
+  phone:    '',
+  address:  '',
+  total:    0,
+  shipping: 0,
+};
+
+/* ── UI COPY (same as before) ───────────────────────────────── */
 const UI = {
   ar: {
-    dir: 'rtl',
-    online: 'متصل · مساعد ذكي',
-    typing: 'جاري الكتابة...',
-    placeholder: 'اكتب رسالتك...',
-    startBtn: '💬 ابدأ الدردشة',
-    nameHint: 'اسمك (اختياري)',
-    divider: 'اليوم',
-    expired: '⚠️ نعتذر، انتهت مدة الاشتراك.',
-    noBalance: '⚠️ نعتذر، المتجر غير متاح حالياً.',
-    errorTitle: 'رابط غير صالح',
-    errorMsg: 'هذا الرابط غير صحيح أو تم حذف المتجر.',
-    errNet: 'مشكل في الاتصال بالإنترنت. حاول مرة أخرى.',
-    errApi: 'عذراً، صاير مشكل. عاود المحاولة.',
-    scrollBtn: '↓ رسائل جديدة',
-    greetOther: 'متصل · جاهز للرد',
+    dir:'rtl', online:'متصل · مساعد ذكي', typing:'جاري الكتابة...',
+    placeholder:'اكتب رسالتك...', startBtn:'💬 ابدأ الدردشة', nameHint:'اسمك (اختياري)',
+    divider:'اليوم', expired:'⚠️ نعتذر، انتهت مدة الاشتراك.',
+    noBalance:'⚠️ انتهى الرصيد، يرجى تعبئة الحساب',
+    errorTitle:'رابط غير صالح', errorMsg:'هذا الرابط غير صحيح.',
+    errNet:'مشكل في الاتصال.', errApi:'عذراً، صاير مشكل. عاود المحاولة.',
+    scrollBtn:'↓ رسائل جديدة', orderSaved:'✅ تم تسجيل طلبك بنجاح!',
+    payBtn:'💳 إتمام الدفع', orderConfirmTitle:'ملخص الطلب',
   },
   fr: {
-    dir: 'ltr',
-    online: 'En ligne · Assistant IA',
-    typing: 'En train d\'écrire...',
-    placeholder: 'Écrivez votre message...',
-    startBtn: '💬 Démarrer',
-    nameHint: 'Votre prénom (optionnel)',
-    divider: 'Aujourd\'hui',
-    expired: '⚠️ Désolé, l\'abonnement a expiré.',
-    noBalance: '⚠️ Désolé, ce magasin est indisponible.',
-    errorTitle: 'Lien invalide',
-    errorMsg: 'Ce lien est invalide ou la boutique a été supprimée.',
-    errNet: 'Erreur de connexion. Réessayez.',
-    errApi: 'Désolé, une erreur s\'est produite. Réessayez.',
-    scrollBtn: '↓ Nouveaux messages',
-    greetOther: 'En ligne · Prêt à vous aider',
+    dir:'ltr', online:'En ligne · Assistant IA', typing:'En train d\'écrire...',
+    placeholder:'Écrivez votre message...', startBtn:'💬 Démarrer', nameHint:'Votre prénom (optionnel)',
+    divider:'Aujourd\'hui', expired:'⚠️ Abonnement expiré.', noBalance:'⚠️ Solde épuisé.',
+    errorTitle:'Lien invalide', errorMsg:'Ce lien est invalide.',
+    errNet:'Erreur de connexion.', errApi:'Une erreur s\'est produite.',
+    scrollBtn:'↓ Nouveaux messages', orderSaved:'✅ Commande enregistrée!',
+    payBtn:'💳 Procéder au paiement', orderConfirmTitle:'Récapitulatif',
   },
   en: {
-    dir: 'ltr',
-    online: 'Online · AI Assistant',
-    typing: 'Typing...',
-    placeholder: 'Type a message...',
-    startBtn: '💬 Start Chat',
-    nameHint: 'Your name (optional)',
-    divider: 'Today',
-    expired: '⚠️ Sorry, this store\'s subscription has expired.',
-    noBalance: '⚠️ Sorry, this store is currently unavailable.',
-    errorTitle: 'Bot Not Found',
-    errorMsg: 'This chat link is invalid or the store has been removed.',
-    errNet: 'Connection error. Please check your internet.',
-    errApi: 'Sorry, something went wrong. Please try again.',
-    scrollBtn: '↓ New messages',
-    greetOther: 'Online · Ready to help',
+    dir:'ltr', online:'Online · AI Assistant', typing:'Typing...',
+    placeholder:'Type a message...', startBtn:'💬 Start Chat', nameHint:'Your name (optional)',
+    divider:'Today', expired:'⚠️ Subscription expired.', noBalance:'⚠️ Message balance is zero.',
+    errorTitle:'Bot Not Found', errorMsg:'This chat link is invalid.',
+    errNet:'Connection error.', errApi:'Something went wrong.',
+    scrollBtn:'↓ New messages', orderSaved:'✅ Order placed successfully!',
+    payBtn:'💳 Complete Payment', orderConfirmTitle:'Order Summary',
   },
   es: {
-    dir: 'ltr',
-    online: 'En línea · Asistente IA',
-    typing: 'Escribiendo...',
-    placeholder: 'Escribe un mensaje...',
-    startBtn: '💬 Iniciar Chat',
-    nameHint: 'Tu nombre (opcional)',
-    divider: 'Hoy',
-    expired: '⚠️ Lo sentimos, la suscripción ha expirado.',
-    noBalance: '⚠️ Lo sentimos, esta tienda no está disponible.',
-    errorTitle: 'Enlace inválido',
-    errorMsg: 'Este enlace no es válido o la tienda fue eliminada.',
-    errNet: 'Error de conexión. Intenta de nuevo.',
-    errApi: 'Lo sentimos, ocurrió un error. Intenta de nuevo.',
-    scrollBtn: '↓ Nuevos mensajes',
-    greetOther: 'En línea · Listo para ayudar',
+    dir:'ltr', online:'En línea · Asistente IA', typing:'Escribiendo...',
+    placeholder:'Escribe un mensaje...', startBtn:'💬 Iniciar Chat', nameHint:'Tu nombre (opcional)',
+    divider:'Hoy', expired:'⚠️ Suscripción expirada.', noBalance:'⚠️ Saldo agotado.',
+    errorTitle:'Enlace inválido', errorMsg:'Este enlace no es válido.',
+    errNet:'Error de conexión.', errApi:'Ocurrió un error.',
+    scrollBtn:'↓ Nuevos mensajes', orderSaved:'✅ ¡Pedido realizado!',
+    payBtn:'💳 Pagar', orderConfirmTitle:'Resumen del Pedido',
   },
   de: {
-    dir: 'ltr',
-    online: 'Online · KI-Assistent',
-    typing: 'Schreibt...',
-    placeholder: 'Nachricht schreiben...',
-    startBtn: '💬 Chat starten',
-    nameHint: 'Dein Name (optional)',
-    divider: 'Heute',
-    expired: '⚠️ Das Abonnement ist abgelaufen.',
-    noBalance: '⚠️ Dieser Shop ist derzeit nicht verfügbar.',
-    errorTitle: 'Ungültiger Link',
-    errorMsg: 'Dieser Link ist ungültig oder der Shop wurde gelöscht.',
-    errNet: 'Verbindungsfehler. Bitte versuche es erneut.',
-    errApi: 'Entschuldigung, ein Fehler ist aufgetreten.',
-    scrollBtn: '↓ Neue Nachrichten',
-    greetOther: 'Online · Bereit zu helfen',
+    dir:'ltr', online:'Online · KI-Assistent', typing:'Schreibt...',
+    placeholder:'Nachricht schreiben...', startBtn:'💬 Chat starten', nameHint:'Dein Name (optional)',
+    divider:'Heute', expired:'⚠️ Abonnement abgelaufen.', noBalance:'⚠️ Guthaben erschöpft.',
+    errorTitle:'Ungültiger Link', errorMsg:'Dieser Link ist ungültig.',
+    errNet:'Verbindungsfehler.', errApi:'Ein Fehler ist aufgetreten.',
+    scrollBtn:'↓ Neue Nachrichten', orderSaved:'✅ Bestellung aufgegeben!',
+    payBtn:'💳 Zahlung abschließen', orderConfirmTitle:'Bestellübersicht',
   },
 };
 
-/* ── SWITCH UI LANGUAGE ───────────────────────────────── */
+/* ── LANGUAGE SWITCH ─────────────────────────────────────────── */
 function switchUILang(lang) {
   if (!UI[lang]) lang = 'ar';
   uiLang = lang;
   localStorage.setItem('bchat_lang', lang);
-
   const c = UI[lang];
   document.documentElement.lang = lang;
   document.documentElement.dir  = c.dir;
-
-  // Sync all lang selectors
-  document.querySelectorAll('[data-lang]').forEach(el => {
-    el.classList.toggle('active', el.dataset.lang === lang);
-  });
+  document.querySelectorAll('[data-lang]').forEach(el =>
+    el.classList.toggle('active', el.dataset.lang === lang));
   const chatSel = document.getElementById('chatLangSelect');
   if (chatSel) chatSel.value = lang;
-
-  // Update placeholders & labels
   const ni = document.getElementById('customerNameInput');
   if (ni) ni.placeholder = c.nameHint;
   const mi = document.getElementById('msgInput');
-  if (mi) mi.placeholder = c.placeholder;
-  const sb = document.getElementById('startBtn');
-  if (sb && !sb.disabled) sb.textContent = c.startBtn;
+  if (mi) { mi.placeholder = c.placeholder; mi.dir = lang==='ar'?'rtl':'ltr'; mi.style.textAlign = lang==='ar'?'right':'left'; }
+  const startB = document.getElementById('startBtn');
+  if (startB && !startB.disabled) startB.textContent = c.startBtn;
   const dd = document.getElementById('dateDivider');
   if (dd) dd.textContent = c.divider;
   const scrollB = document.getElementById('scrollBtn');
   if (scrollB) scrollB.textContent = c.scrollBtn;
-
-  // Update header status
   const st = document.getElementById('chatHeaderStatus');
   if (st && !st.classList.contains('typing-status')) st.textContent = c.online;
-
-  // Update input dir
-  if (mi) mi.dir = (lang === 'ar') ? 'rtl' : 'ltr';
-  if (mi) mi.style.textAlign = (lang === 'ar') ? 'right' : 'left';
 }
 
-/* ── INIT ─────────────────────────────────────────────── */
+/* ── INIT ──────────────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', async () => {
-  // Restore language
   const savedLang = localStorage.getItem('bchat_lang') || 'ar';
   switchUILang(savedLang);
-
-  const params = new URLSearchParams(window.location.search);
-  const mid    = params.get('id');
-
-  if (!mid) {
-    showError(UI[uiLang].errorTitle, UI[uiLang].errorMsg);
-    return;
-  }
-
+  ['welcomeLangSelect','chatLangSelect'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = savedLang; el.addEventListener('change', e => switchUILang(e.target.value)); }
+  });
+  const mid = new URLSearchParams(window.location.search).get('id');
+  if (!mid) { showError(UI[uiLang].errorTitle, UI[uiLang].errorMsg); return; }
   await loadMerchant(mid);
 });
 
-/* ── LOAD MERCHANT ────────────────────────────────────── */
+/* ── LOAD MERCHANT ─────────────────────────────────────────────── */
 async function loadMerchant(mid) {
-  const { data, error } = await sb
-    .from('profiles')
-    .select('id,store_name,bot_name,logo_url,bio,products_info,custom_prompt,theme_color,sub_end_date,message_balance,structured_data')
-    .eq('id', mid)
-    .single();
-
-  if (error || !data) {
-    showError(UI[uiLang].errorTitle, UI[uiLang].errorMsg);
-    return;
-  }
-
+  const { data, error } = await sb.from('profiles')
+    .select('id,store_name,bot_name,logo_url,bio,products_info,custom_prompt,theme_color,sub_end_date,message_balance,structured_data,payment_link,resend_api_key,resend_from,notify_email')
+    .eq('id', mid).single();
+  if (error || !data) { showError(UI[uiLang].errorTitle, UI[uiLang].errorMsg); return; }
   merchant = data;
-
-  // ── Apply dynamic theme color ──
-  const hex = merchant.theme_color || '#6366f1';
-  applyThemeColor(hex);
-
-  // ── Page title ──
+  applyThemeColor(merchant.theme_color || '#6366f1');
   document.title = `${merchant.store_name} · Chat`;
-
-  // ── Populate welcome screen ──
   populateWelcome();
-
   showScreen('welcomeScreen');
 }
 
-/* ── APPLY THEME COLOR ────────────────────────────────── */
+/* ── APPLY THEME COLOR ─────────────────────────────────────────── */
 function applyThemeColor(hex) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  const glow  = `rgba(${r},${g},${b},.35)`;
-  const tint  = `rgba(${r},${g},${b},.12)`;
-  const tint2 = `rgba(${r},${g},${b},.06)`;
-
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
   const root = document.documentElement.style;
-  root.setProperty('--primary',       hex);
-  root.setProperty('--primary-dark',  shadeHex(hex, -20));
-  root.setProperty('--primary-glow',  glow);
-  root.setProperty('--primary-tint',  tint);
-  root.setProperty('--primary-tint2', tint2);
-
-  // Header left border accent
+  root.setProperty('--primary', hex);
+  root.setProperty('--primary-dark', shadeHex(hex,-20));
+  root.setProperty('--primary-glow', `rgba(${r},${g},${b},.35)`);
+  root.setProperty('--primary-tint', `rgba(${r},${g},${b},.12)`);
+  root.setProperty('--primary-tint2', `rgba(${r},${g},${b},.06)`);
   const header = document.getElementById('chatHeader');
   if (header) header.style.borderTop = `3px solid ${hex}`;
 }
-
 function shadeHex(hex, amt) {
-  let r = Math.min(255, Math.max(0, parseInt(hex.slice(1,3),16) + amt));
-  let g = Math.min(255, Math.max(0, parseInt(hex.slice(3,5),16) + amt));
-  let b = Math.min(255, Math.max(0, parseInt(hex.slice(5,7),16) + amt));
+  let r = Math.min(255,Math.max(0,parseInt(hex.slice(1,3),16)+amt));
+  let g = Math.min(255,Math.max(0,parseInt(hex.slice(3,5),16)+amt));
+  let b = Math.min(255,Math.max(0,parseInt(hex.slice(5,7),16)+amt));
   return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
-/* ── POPULATE WELCOME ─────────────────────────────────── */
+/* ── POPULATE WELCOME ──────────────────────────────────────────── */
 function populateWelcome() {
   const av = document.getElementById('welcomeAvatar');
-  if (merchant.logo_url) {
-    av.innerHTML = `<img src="${escHtml(merchant.logo_url)}" alt="Logo" />`;
-  } else {
-    av.textContent = (merchant.store_name || 'B')[0].toUpperCase();
-  }
-
+  if (merchant.logo_url) { av.innerHTML = `<img src="${escHtml(merchant.logo_url)}" alt="Logo"/>`; }
+  else { av.textContent = (merchant.store_name||'B')[0].toUpperCase(); }
+  av.style.borderColor = merchant.theme_color || '#6366f1';
+  av.style.boxShadow = '0 0 0 6px var(--primary-tint), 0 0 40px var(--primary-glow)';
   document.getElementById('welcomeName').textContent = merchant.store_name || 'المتجر';
   document.getElementById('welcomeBio').textContent  = merchant.bio || '';
-
-  // Border glow on avatar using theme color
-  av.style.borderColor = merchant.theme_color || '#6366f1';
-  av.style.boxShadow   = `0 0 0 6px var(--primary-tint), 0 0 40px var(--primary-glow)`;
 }
 
-/* ── START CHAT ───────────────────────────────────────── */
+/* ── START CHAT ────────────────────────────────────────────────── */
 async function startChat() {
   const btn = document.getElementById('startBtn');
   btn.textContent = '...'; btn.disabled = true;
-
-  customerName = (document.getElementById('customerNameInput').value.trim())
-                 || (uiLang === 'ar' ? 'زبون' : uiLang === 'fr' ? 'Client' : 'Customer');
-
-  // ── Populate chat header ──
+  customerName = document.getElementById('customerNameInput').value.trim() ||
+    (uiLang==='ar' ? 'زبون' : uiLang==='fr' ? 'Client' : 'Customer');
   const av = document.getElementById('chatHeaderAvatar');
   if (merchant.logo_url) {
     document.getElementById('chatHeaderAvatarText').style.display = 'none';
-    av.innerHTML = `<img src="${escHtml(merchant.logo_url)}" alt="Logo" /><div class="av-online"></div>`;
-  } else {
-    document.getElementById('chatHeaderAvatarText').textContent = (merchant.bot_name || 'B')[0];
-  }
+    av.innerHTML = `<img src="${escHtml(merchant.logo_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/><div class="av-online"></div>`;
+  } else { document.getElementById('chatHeaderAvatarText').textContent = (merchant.bot_name||'B')[0]; }
   document.getElementById('chatHeaderName').textContent = merchant.bot_name || merchant.store_name;
   document.getElementById('chatHeaderStatus').textContent = UI[uiLang].online;
-
-  // ── Check bot availability ──
-  isBotActive = checkBotActive();
+  isBotActive = new Date(merchant.sub_end_date) > new Date() && (merchant.message_balance||0) > 0;
   if (!isBotActive) {
-    const now = new Date();
-    const msg = (new Date(merchant.sub_end_date) <= now)
-      ? UI[uiLang].expired
-      : UI[uiLang].noBalance;
+    const msg = new Date(merchant.sub_end_date) <= new Date() ? UI[uiLang].expired : UI[uiLang].noBalance;
     showBanner(msg, 'error');
     document.getElementById('msgInput').disabled = true;
     document.getElementById('sendBtn').disabled  = true;
   }
-
-  // ── Greeting card ──
   const greetings = {
-    ar: `مرحباً بك في <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>أنا <strong>${escHtml(merchant.bot_name || 'مساعد المتجر')}</strong>، كيف يمكنني مساعدتك اليوم؟`,
-    fr: `Bienvenue chez <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>Je suis <strong>${escHtml(merchant.bot_name || 'votre assistant')}</strong>, comment puis-je vous aider ?`,
-    en: `Welcome to <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>I'm <strong>${escHtml(merchant.bot_name || 'your assistant')}</strong>, how can I help you today?`,
-    es: `Bienvenido/a a <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>Soy <strong>${escHtml(merchant.bot_name || 'tu asistente')}</strong>, ¿cómo puedo ayudarte?`,
-    de: `Willkommen bei <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>Ich bin <strong>${escHtml(merchant.bot_name || 'dein Assistent')}</strong>, wie kann ich helfen?`,
+    ar: `مرحباً بك في <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>أنا <strong>${escHtml(merchant.bot_name||'المساعد')}</strong>، كيف يمكنني مساعدتك؟`,
+    fr: `Bienvenue chez <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>Je suis <strong>${escHtml(merchant.bot_name||'votre assistant')}</strong>, comment puis-je vous aider?`,
+    en: `Welcome to <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋<br/>I'm <strong>${escHtml(merchant.bot_name||'your assistant')}</strong>, how can I help you today?`,
+    es: `Bienvenido/a a <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋`,
+    de: `Willkommen bei <span class="store-name-em">${escHtml(merchant.store_name)}</span> 👋`,
   };
   document.getElementById('greetingCard').innerHTML = greetings[uiLang] || greetings['ar'];
-
-  // ── Create DB conversation ──
   await createConversation();
-
   showScreen('chatScreen');
-  btn.textContent = UI[uiLang].startBtn;
-  btn.disabled    = false;
-
+  btn.textContent = UI[uiLang].startBtn; btn.disabled = false;
   scrollBottom();
   if (isBotActive) setTimeout(() => document.getElementById('msgInput').focus(), 300);
 }
 
-/* ── CHECK BOT ACTIVE ─────────────────────────────────── */
-function checkBotActive() {
-  return new Date(merchant.sub_end_date) > new Date() && (merchant.message_balance || 0) > 0;
-}
-
-/* ── CREATE CONVERSATION ─────────────────────────────── */
+/* ── CREATE CONVERSATION ───────────────────────────────────────── */
 async function createConversation() {
   const { data, error } = await sb.from('conversations').insert({
     merchant_id:   merchant.id,
@@ -917,418 +866,448 @@ async function createConversation() {
   if (!error && data) convId = data.id;
 }
 
-/* ── SEND MESSAGE ─────────────────────────────────────── */
+/* ── SEND MESSAGE ──────────────────────────────────────────────── */
 async function sendMessage() {
   const input = document.getElementById('msgInput');
   const text  = input.value.trim();
   if (!text || isTyping || !isBotActive) return;
-
-  input.value = '';
-  autoResize(input);
-
-  // Render user bubble immediately for snappy UX
+  input.value = ''; autoResize(input);
   appendBubble('user', text);
-  chatHistory.push({ role: 'user', content: text });
-
+  chatHistory.push({ role:'user', content:text });
   setTyping(true);
-
-  // ── 1. Call Groq ───────────────────────────────────────
   const reply = await callGroq();
-
   setTyping(false);
-
-  // ── 2. Render bot reply ────────────────────────────────
   appendBubble('bot', reply);
-  chatHistory.push({ role: 'assistant', content: reply });
+  chatHistory.push({ role:'assistant', content:reply });
 
-  // ── 3. Decrement balance via secure Supabase RPC ──────────
-  //    The SQL function `decrement_message_balance` runs server-side:
-  //    UPDATE profiles SET message_balance = message_balance - 1
-  //    WHERE id = m_id AND message_balance > 0;
-  //    This prevents race conditions and negative balances.
-  const { error: rpcErr } = await sb.rpc('decrement_message_balance', {
-    m_id: merchant.id,
-  });
+  // Parse AI reply for ORDER_TRIGGER markers
+  await handleOrderTrigger(reply, text);
 
-  if (rpcErr) {
-    // RPC failed (network, permissions, etc.) — log and use local fallback
-    console.error('[B-Chat] decrement_message_balance RPC failed:', rpcErr.message);
-    merchant.message_balance = Math.max(0, (merchant.message_balance || 1) - 1);
-  } else {
-    // Re-fetch the real balance from DB — this is the source of truth
-    const { data: freshProfile, error: fetchErr } = await sb
-      .from('profiles')
-      .select('message_balance')
-      .eq('id', merchant.id)
-      .single();
-
-    if (fetchErr) {
-      console.error('[B-Chat] Balance re-fetch failed:', fetchErr.message);
-      merchant.message_balance = Math.max(0, (merchant.message_balance || 1) - 1);
-    } else {
-      merchant.message_balance = freshProfile.message_balance ?? 0;
-    }
+  // Decrement balance via RPC
+  const { error: rpcErr } = await sb.rpc('decrement_message_balance', { m_id: merchant.id });
+  if (rpcErr) { merchant.message_balance = Math.max(0,(merchant.message_balance||1)-1); }
+  else {
+    const { data: fp } = await sb.from('profiles').select('message_balance').eq('id', merchant.id).single();
+    if (fp) merchant.message_balance = fp.message_balance ?? 0;
   }
 
-  // ── 4. Save conversation history (fire-and-forget is fine here) ──
+  // Save conversation (fire-and-forget)
   if (convId) {
-    sb.from('conversations')
-      .update({
-        chat_history:  chatHistory,
-        customer_data: {
-          name:        customerName,
-          lang:        uiLang,
-          last_active: new Date().toISOString(),
-        },
-      })
-      .eq('id', convId)
-      .then(({ error }) => {
-        if (error) console.error('[B-Chat] Conversation save failed:', error.message);
-      });
+    sb.from('conversations').update({
+      chat_history:  chatHistory,
+      customer_data: { name:customerName, lang:uiLang, last_active:new Date().toISOString() },
+    }).eq('id', convId);
   }
 
-  // ── 5. Lock chat if balance is now zero ────────────────
   if (merchant.message_balance <= 0) {
     isBotActive = false;
-    // Show exact required Arabic stop message
-    showBanner('⚠️ انتهى الرصيد، يرجى تعبئة الحساب', 'error');
-    const msgInput = document.getElementById('msgInput');
-    const sendBtn  = document.getElementById('sendBtn');
-    msgInput.disabled     = true;
-    msgInput.placeholder  = '';
-    sendBtn.disabled      = true;
-    console.info('[B-Chat] Balance reached 0 — chat locked.');
+    showBanner(UI[uiLang].noBalance, 'error');
+    document.getElementById('msgInput').disabled = true;
+    document.getElementById('sendBtn').disabled  = true;
   }
-
   scrollBottom();
   if (isBotActive) input.focus();
 }
 
-/* ── CALL GROQ ────────────────────────────────────────── */
+/* ── CALL GROQ ─────────────────────────────────────────────────── */
 async function callGroq() {
-  const sysPrompt = buildSystemPrompt();
-
-  // Send last 24 messages for context (12 user + 12 bot)
-  const messages = [
-    { role: 'system', content: sysPrompt },
-    ...chatHistory.slice(-24),
-  ];
-
+  const messages = [{ role:'system', content: buildSystemPrompt() }, ...chatHistory.slice(-24)];
   try {
     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${BCHAT_CONFIG.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model:       BCHAT_CONFIG.GROQ_MODEL,
-        max_tokens:  600,
-        temperature: 0.75,
-        messages,
-      }),
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${BCHAT_CONFIG.GROQ_API_KEY}` },
+      body: JSON.stringify({ model:BCHAT_CONFIG.GROQ_MODEL, max_tokens:700, temperature:0.7, messages }),
     });
-
-    if (!resp.ok) {
-      console.error('Groq HTTP error:', resp.status, await resp.text().catch(()=>''));
-      return UI[uiLang].errApi;
-    }
-
+    if (!resp.ok) return UI[uiLang].errApi;
     const data = await resp.json();
-    const raw  = data.choices?.[0]?.message?.content || '';
-    return cleanAIOutput(raw) || UI[uiLang].errApi;
-
-  } catch (err) {
-    console.error('Groq fetch error:', err);
-    return UI[uiLang].errNet;
-  }
+    return cleanAIOutput(data.choices?.[0]?.message?.content || '') || UI[uiLang].errApi;
+  } catch { return UI[uiLang].errNet; }
 }
 
-/* ── CLEAN AI OUTPUT ──────────────────────────────────── */
-/**
- * Strips all <think>...</think> blocks (DeepSeek / reasoning models).
- * Also cleans <thinking>, <reflection>, and similar internal tags.
- * Trims extra whitespace and blank lines.
- */
+/* ── CLEAN AI OUTPUT ───────────────────────────────────────────── */
 function cleanAIOutput(raw) {
-  if (!raw) return '';
-  let clean = raw
-    // Remove <think>...</think> (multiline, greedy off)
-    .replace(/<think[\s\S]*?<\/think>/gi, '')
-    // Remove <thinking>...</thinking>
-    .replace(/<thinking[\s\S]*?<\/thinking>/gi, '')
-    // Remove <reflection>...</reflection>
-    .replace(/<reflection[\s\S]*?<\/reflection>/gi, '')
-    // Remove <reasoning>...</reasoning>
-    .replace(/<reasoning[\s\S]*?<\/reasoning>/gi, '')
-    // Remove any leftover orphan opening/closing think tags
-    .replace(/<\/?think[^>]*>/gi, '')
-    // Collapse 3+ blank lines → 1 blank line
-    .replace(/\n{3,}/g, '\n\n')
-    // Trim
-    .trim();
-  return clean;
+  return (raw||'')    .replace(/<think[\s\S]*?<\/think>/gi, '')    .replace(/<thinking[\s\S]*?<\/thinking>/gi, '')    .replace(/<reflection[\s\S]*?<\/reflection>/gi, '')    .replace(/<reasoning[\s\S]*?<\/reasoning>/gi, '')    .replace(/<\/?think[^>]*>/gi, '')    .replace(/\n{3,}/g, '\n\n')    .trim();
 }
 
-/* ── BUILD SYSTEM PROMPT ──────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   ORDER-TO-CASH  SYSTEM
+════════════════════════════════════════════════════════════ */
+
+/* ── BUILD SYSTEM PROMPT (Closer Edition) ──────────────────── */
 function buildSystemPrompt() {
-  const sd  = merchant.structured_data || {};
-  const bd  = sd.business_details      || {};
-  const zones    = sd.shipping_zones   || [];
-  const products = sd.products         || [];
-
-  // ── Tone mapping ──
-  const toneMap = {
-    friendly:     'ودود ومتقرب',
-    professional: 'احترافي ومحترم',
-    casual:       'غير رسمي وعفوي',
-    energetic:    'حيوي ومتحمس',
-  };
+  const sd       = merchant.structured_data || {};
+  const bd       = sd.business_details      || {};
+  const zones    = sd.shipping_zones        || [];
+  const products = sd.products              || [];
+  const toneMap  = { friendly:'ودود', professional:'احترافي', casual:'عفوي', energetic:'حيوي' };
   const toneDesc = toneMap[bd.tone_of_voice] || 'ودود';
-
-  // ── Language instruction ──
-  const langInstructions = {
-    ar: `تحدث بالدارجة المغربية (خليط طبيعي من العربية والفرنسية المغربية). إذا تكلم الزبون بلغة أخرى، جاوبه بنفس لغته.`,
-    fr: `Réponds en français. Adapte-toi à la langue du client si nécessaire.`,
-    en: `Reply in English. Adapt to the customer's language if they switch.`,
-    es: `Responde en español. Adáptate al idioma del cliente.`,
-    de: `Antworte auf Deutsch. Passe dich der Sprache des Kunden an.`,
+  const langInst = {
+    ar:'تحدث بالدارجة المغربية. إذا تكلم الزبون بلغة أخرى جاوبه بيها.',
+    fr:'Réponds en français. Adapte-toi au client.',
+    en:'Reply in English. Adapt to the customer.',
+    es:'Responde en español.', de:'Antworte auf Deutsch.',
   };
 
   const parts = [
-    `أنت ${escHtml(merchant.bot_name || 'مساعد مبيعات')} ديال متجر "${escHtml(merchant.store_name)}".`,
-    `أسلوبك: ${toneDesc}.`,
-    ``,
-    `## مهمتك`,
-    `- أجب على أسئلة الزبائن بدقة بناءً على المعلومات أدناه`,
-    `- اقنع الزبون بالشراء — أنت sales closer محترف`,
-    `- اطلب رقم الهاتف لتأكيد الطلب في نهاية المحادثة`,
-    ``,
-    `## اللغة`,
-    langInstructions[uiLang] || langInstructions['ar'],
+    `أنت ${escHtml(merchant.bot_name||'مساعد مبيعات')} ديال "${escHtml(merchant.store_name)}". أسلوبك: ${toneDesc}.`,
+    \`,
+    `## مهمتك الأساسية — SALES CLOSER`,
+    `- أجب على أسئلة المنتجات بدقة`,
+    `- اقنع الزبون بالشراء`,
+    `- حين يقرر الزبون الطلب: اجمع الاسم ورقم الهاتف والعنوان`,
+    `- بعد جمع المعلومات الثلاث: أرسل في ردك الجملة التالية بالضبط على سطر منفصل:`,
+    `  [[ORDER_READY:الاسم|رقم_الهاتف|العنوان|اسم_المنتج:السعر,اسم_منتج2:سعر2]]`,
+    `  مثال: [[ORDER_READY:أحمد|0661234567|طنجة شارع محمد5|روب حمراء:299,توصيل:30]]`,
+    `- لا تذكر أبداً أن هناك رابط دفع قبل ما تجمع المعلومات`,
+    `,
+    `## اللغة`, langInst[uiLang]||langInst['ar'],
     `اسم الزبون: ${escHtml(customerName)}.`,
-    ``,
+    `,
     `## قواعد صارمة`,
-    `- لا تقل أبداً أنك AI أو Groq أو نموذج لغوي`,
-    `- لا تخترع أسعاراً أو معلومات غير موجودة في البيانات أدناه`,
-    `- ردودك قصيرة ومركزة (2-3 جمل)`,
-    `- لا تُظهر تفكيراً داخلياً — فقط الرد النهائي`,
+    `- لا تقل أنك AI أو Groq`,
+    `- لا تخترع أسعاراً`,
+    `- ردود قصيرة (2-3 جمل)`,
+    `- لا تُظهر التفكير الداخلي`,
   ];
 
-  // ── Business details ──
-  if (bd.business_type || bd.main_city) {
-    parts.push(`\n## معلومات المتجر`);
+  if (bd.business_type||bd.main_city) {
+    parts.push('\n## المتجر');
     if (bd.business_type) parts.push(`- نوع النشاط: ${bd.business_type}`);
-    if (bd.main_city)     parts.push(`- المدينة الرئيسية: ${bd.main_city}`);
+    if (bd.main_city)     parts.push(`- المدينة: ${bd.main_city}`);
     if (merchant.bio)     parts.push(`- وصف: ${merchant.bio}`);
   }
 
-  // ── Products (structured) ──
   if (products.length) {
-    parts.push(`\n## كتالوج المنتجات`);
+    parts.push('\n## كتالوج المنتجات');
     products.forEach(p => {
       let line = `- ${p.name}: ${p.price} درهم`;
       if (p.description) line += ` — ${p.description}`;
       parts.push(line);
     });
   } else if (merchant.products_info) {
-    // Fallback to legacy plain-text field
-    parts.push(`\n## المنتجات والمعلومات\n${merchant.products_info}`);
-  } else {
-    parts.push(`\n## ملاحظة: صاحب المتجر لم يضف معلومات المنتجات بعد. اطلب من الزبون التواصل على الواتساب مباشرة.`);
+    parts.push(`\n## المنتجات\n${merchant.products_info}`);
   }
 
-  // ── Shipping zones (structured) ──
   if (zones.length) {
-    parts.push(`\n## التوصيل`);
-    zones.forEach(z => {
-      parts.push(`- ${z.city}: ${z.price} درهم`);
-    });
-    parts.push(`(احسب تكلفة التوصيل بدقة حسب المدينة التي يذكرها الزبون)`);
+    parts.push('\n## التوصيل');
+    zones.forEach(z => parts.push(`- ${z.city}: ${z.price} درهم`));
   }
 
-  // ── Custom prompt (merchant override) ──
-  if (merchant.custom_prompt) {
-    parts.push(`\n## تعليمات إضافية من صاحب المتجر\n${merchant.custom_prompt}`);
+  if (merchant.custom_prompt) parts.push(`\n## تعليمات إضافية\n${merchant.custom_prompt}`);
+
+  // Inject current order state context
+  if (orderState !== ORDER_STATE.idle) {
+    parts.push(`\n## حالة الطلب الحالية`);
+    parts.push(`- الاسم: ${pendingOrder.name || 'لم يُجمع بعد'}`);
+    parts.push(`- الهاتف: ${pendingOrder.phone || 'لم يُجمع بعد'}`);
+    parts.push(`- العنوان: ${pendingOrder.address || 'لم يُجمع بعد'}`);
+    if (!pendingOrder.name)    parts.push('- المطلوب: اسأل عن الاسم الكامل');
+    else if (!pendingOrder.phone)   parts.push('- المطلوب: اسأل عن رقم الهاتف');
+    else if (!pendingOrder.address) parts.push('- المطلوب: اسأل عن العنوان بالتفصيل');
+    else parts.push('- جميع المعلومات مكتملة → أرسل ORDER_READY الآن');
   }
 
   return parts.join('\n');
 }
 
-/* ── TYPING STATE ─────────────────────────────────────── */
-let typingEl = null;
+/* ── HANDLE ORDER TRIGGER ──────────────────────────────────── */
+async function handleOrderTrigger(replyText, userInput) {
+  // Check for ORDER_READY marker in AI reply
+  const orderMatch = replyText.match(/\[\[ORDER_READY:([^\]]+)\]\]/);
+  if (orderMatch) {
+    await processOrderReady(orderMatch[1]);
+    return;
+  }
 
+  // Update order state machine based on conversation
+  if (orderState === ORDER_STATE.idle) {
+    // Detect purchase intent keywords
+    const buyKeywords = ['بغيت','حاب','طلب','order','acheter','buy','bestellen','quiero','commander'];
+    const hasBuyIntent = buyKeywords.some(k => (userInput+replyText).toLowerCase().includes(k));
+    if (hasBuyIntent) {
+      orderState = ORDER_STATE.collecting;
+      // Extract items from conversation context
+      const sd = merchant.structured_data || {};
+      const products = sd.products || [];
+      // Try to detect which products were mentioned
+      products.forEach(p => {
+        if ((userInput+replyText).toLowerCase().includes(p.name.toLowerCase())) {
+          if (!pendingOrder.items.find(i => i.name === p.name)) {
+            pendingOrder.items.push({ name:p.name, price:p.price, qty:1 });
+          }
+        }
+      });
+    }
+  }
+}
+
+/* ── PROCESS ORDER_READY ────────────────────────────────────── */
+async function processOrderReady(orderData) {
+  // Parse: name|phone|address|item1:price1,item2:price2
+  const parts = orderData.split('|');
+  if (parts.length < 3) return;
+
+  const name    = parts[0].trim();
+  const phone   = parts[1].trim();
+  const address = parts[2].trim();
+  const itemsRaw = parts[3] || '';
+
+  // Parse items
+  const items = [];
+  let subtotal = 0;
+  itemsRaw.split(',').forEach(itemStr => {
+    const colonIdx = itemStr.lastIndexOf(':');
+    if (colonIdx === -1) return;
+    const itemName  = itemStr.slice(0, colonIdx).trim();
+    const itemPrice = parseFloat(itemStr.slice(colonIdx+1)) || 0;
+    if (itemName) {
+      items.push({ name:itemName, price:itemPrice, qty:1 });
+      subtotal += itemPrice;
+    }
+  });
+
+  // Find shipping from items (if last item is "توصيل" or "shipping")
+  let shippingCost = 0;
+  const shippingItem = items.find(i =>
+    i.name.includes('توصيل') || i.name.toLowerCase().includes('shipping') || i.name.toLowerCase().includes('livraison')
+  );
+  if (shippingItem) shippingCost = shippingItem.price;
+
+  pendingOrder = { name, phone, address, items, subtotal, shipping: shippingCost, total: subtotal };
+
+  // Save to Supabase
+  const order = await saveOrderToSupabase({ name, phone, address, items, subtotal, shippingCost, total: subtotal });
+  if (order) {
+    orderState = ORDER_STATE.saved;
+    showOrderConfirmation(order);
+    // Send email notification
+    await sendResendEmail(order);
+  }
+}
+
+/* ── SAVE ORDER TO SUPABASE ────────────────────────────────── */
+async function saveOrderToSupabase({ name, phone, address, items, subtotal, shippingCost, total }) {
+  const { data, error } = await sb.from('orders').insert({
+    merchant_id:      merchant.id,
+    conversation_id:  convId,
+    customer_name:    name,
+    customer_phone:   phone,
+    customer_address: address,
+    items:            items,
+    subtotal:         subtotal,
+    shipping_cost:    shippingCost || 0,
+    total_price:      total,
+    currency:         'MAD',
+    status:           'pending',
+  }).select().single();
+
+  if (error) {
+    console.error('[B-Chat] Order save failed:', error.message);
+    return null;
+  }
+  console.info('[B-Chat] Order saved:', data.id);
+  return data;
+}
+
+/* ── SEND RESEND EMAIL NOTIFICATION ────────────────────────── */
+async function sendResendEmail(order) {
+  // Merchant must have configured resend_api_key and notify_email
+  // We read these from the merchant profile (not stored in chat for security)
+  // So we call a lightweight Supabase Edge Function OR use Resend directly
+  // Since we are browser-only, we call Resend API directly with merchant's key
+  // The key is fetched from profiles (already loaded in merchant object if we select it)
+  // For security, we only do this if merchant stored their key
+  if (!merchant.resend_api_key || !merchant.notify_email) {
+    console.info('[B-Chat] No Resend config — email notification skipped.');
+    return;
+  }
+
+  const itemsHtml = order.items.map(i =>
+    `<tr><td style="padding:8px 12px;border-bottom:1px solid #1e293b;">${escHtml(i.name)}</td>
+     <td style="padding:8px 12px;border-bottom:1px solid #1e293b;text-align:right;">${i.qty}x</td>
+     <td style="padding:8px 12px;border-bottom:1px solid #1e293b;text-align:right;font-weight:700;">${i.price} ${order.currency}</td></tr>`
+  ).join('');
+
+  const emailHtml = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/></head>
+<body style="margin:0;padding:0;background:#07080f;font-family:'DM Sans',sans-serif;color:#e2e8f0;">
+<div style="max-width:580px;margin:0 auto;padding:32px 16px;">
+  <div style="background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:16px 16px 0 0;padding:24px 32px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">🛍️</div>
+    <h1 style="margin:0;color:#fff;font-size:1.4rem;">طلب جديد!</h1>
+    <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:.9rem;">${escHtml(merchant.store_name)}</p>
+  </div>
+  <div style="background:#0d1117;border:1px solid rgba(255,255,255,.08);border-top:none;border-radius:0 0 16px 16px;padding:28px 32px;">
+    <div style="display:grid;gap:16px;margin-bottom:24px;">
+      <div style="background:rgba(255,255,255,.04);border-radius:12px;padding:16px;">
+        <p style="margin:0 0 8px;font-size:.75rem;color:#475569;text-transform:uppercase;letter-spacing:.05em;">بيانات العميل</p>
+        <p style="margin:4px 0;font-size:.95rem;"><strong>الاسم:</strong> ${escHtml(order.customer_name)}</p>
+        <p style="margin:4px 0;font-size:.95rem;"><strong>الهاتف:</strong> <a href="tel:${escHtml(order.customer_phone)}" style="color:#a5b4fc;">${escHtml(order.customer_phone)}</a></p>
+        <p style="margin:4px 0;font-size:.95rem;"><strong>العنوان:</strong> ${escHtml(order.customer_address)}</p>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <thead><tr style="background:rgba(99,102,241,.15);">
+        <th style="padding:10px 12px;text-align:right;font-size:.78rem;color:#a5b4fc;">المنتج</th>
+        <th style="padding:10px 12px;text-align:center;font-size:.78rem;color:#a5b4fc;">الكمية</th>
+        <th style="padding:10px 12px;text-align:right;font-size:.78rem;color:#a5b4fc;">السعر</th>
+      </tr></thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:16px;text-align:center;margin-bottom:24px;">
+      <p style="margin:0;font-size:.8rem;color:#a5b4fc;">المجموع الإجمالي</p>
+      <p style="margin:4px 0 0;font-size:2rem;font-weight:800;color:#f1f5f9;">${order.total_price} ${order.currency}</p>
+    </div>
+    <div style="text-align:center;">
+      <a href="${BCHAT_CONFIG.BASE_URL}/dashboard.html" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;">عرض الطلب في الداشبورد</a>
+    </div>
+    <p style="text-align:center;font-size:.75rem;color:#475569;margin-top:20px;">
+      تم الإرسال تلقائياً من B-Chat · رقم الطلب: ${order.id.slice(0,8).toUpperCase()}
+    </p>
+  </div>
+</div>
+</body></html>`;
+
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${merchant.resend_api_key}`,
+      },
+      body: JSON.stringify({
+        from:    merchant.resend_from || 'B-Chat Orders <orders@bchat.ma>',
+        to:      [merchant.notify_email],
+        subject: `🛍️ طلب جديد من ${order.customer_name} — ${order.total_price} MAD`,
+        html:    emailHtml,
+      }),
+    });
+    if (!resp.ok) console.error('[B-Chat] Resend error:', resp.status);
+    else console.info('[B-Chat] Notification email sent to', merchant.notify_email);
+  } catch(err) {
+    console.error('[B-Chat] Resend fetch error:', err);
+  }
+}
+
+/* ── SHOW ORDER CONFIRMATION CARD ──────────────────────────── */
+function showOrderConfirmation(order) {
+  const area = document.getElementById('messagesArea');
+  const card = document.createElement('div');
+  card.className = 'order-confirm-card';
+
+  const itemsHtml = order.items.map(i =>
+    `<div class="oc-item"><span>${escHtml(i.name)}</span><span>${i.price} MAD</span></div>`
+  ).join('');
+
+  const payBtnHtml = merchant.payment_link
+    ? `<a href="${escHtml(merchant.payment_link)}" target="_blank" rel="noopener" class="oc-pay-btn">
+        ${UI[uiLang].payBtn || '💳 إتمام الدفع'}
+       </a>`
+    : `<p class="oc-pay-note">سيتواصل معك التاجر لإتمام الدفع 📞</p>`;
+
+  card.innerHTML = `
+    <div class="oc-header">
+      <span class="oc-icon">✅</span>
+      <span class="oc-title">${UI[uiLang].orderSaved}</span>
+      <span class="oc-id">#${order.id.slice(0,8).toUpperCase()}</span>
+    </div>
+    <div class="oc-details">
+      <div class="oc-row"><span>👤</span><span>${escHtml(order.customer_name)}</span></div>
+      <div class="oc-row"><span>📞</span><span>${escHtml(order.customer_phone)}</span></div>
+      <div class="oc-row"><span>📍</span><span>${escHtml(order.customer_address)}</span></div>
+    </div>
+    <div class="oc-items">${itemsHtml}</div>
+    <div class="oc-total"><span>المجموع</span><strong>${order.total_price} MAD</strong></div>
+    <div class="oc-pay-wrap">${payBtnHtml}</div>`;
+  area.appendChild(card);
+  scrollBottom();
+}
+
+/* ── TYPING STATE ──────────────────────────────────────────── */
+let typingEl = null;
 function setTyping(state) {
   isTyping = state;
   document.getElementById('sendBtn').disabled = state;
-
   const statusEl = document.getElementById('chatHeaderStatus');
-
   if (state) {
-    // Show typing indicator in messages
     const area = document.getElementById('messagesArea');
     typingEl = document.createElement('div');
-    typingEl.className = 'typing-row';
-    typingEl.id = 'typingIndicator';
-
+    typingEl.className = 'typing-row'; typingEl.id = 'typingIndicator';
     const av = createAvatarEl('bot');
-    const tb = document.createElement('div');
-    tb.className = 'typing-bubble';
+    const tb = document.createElement('div'); tb.className = 'typing-bubble';
     tb.innerHTML = '<div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div>';
-
-    typingEl.appendChild(av);
-    typingEl.appendChild(tb);
+    typingEl.appendChild(av); typingEl.appendChild(tb);
     area.appendChild(typingEl);
-
-    // Header status → typing
-    statusEl.textContent = UI[uiLang].typing;
-    statusEl.classList.add('typing-status');
-
+    statusEl.textContent = UI[uiLang].typing; statusEl.classList.add('typing-status');
     scrollBottom();
   } else {
-    // Remove typing indicator
-    const existing = document.getElementById('typingIndicator');
-    if (existing) existing.remove();
-    typingEl = null;
-
-    // Restore header status
-    statusEl.textContent = UI[uiLang].online;
-    statusEl.classList.remove('typing-status');
+    document.getElementById('typingIndicator')?.remove(); typingEl = null;
+    statusEl.textContent = UI[uiLang].online; statusEl.classList.remove('typing-status');
   }
 }
 
-/* ── APPEND BUBBLE ────────────────────────────────────── */
+/* ── APPEND BUBBLE ─────────────────────────────────────────── */
 function appendBubble(role, text) {
+  // Strip ORDER_READY marker from displayed text
+  const displayText = text.replace(/\[\[ORDER_READY:[^\]]*\]\]/g, '').trim();
+  if (!displayText) return;
   const area = document.getElementById('messagesArea');
-
-  const row = document.createElement('div');
-  row.className = `msg-group`;
-
-  const msgRow = document.createElement('div');
-  msgRow.className = `msg-row ${role}`;
-
+  const row = document.createElement('div'); row.className = 'msg-group';
+  const msgRow = document.createElement('div'); msgRow.className = `msg-row ${role}`;
   const av = createAvatarEl(role);
-
-  const wrapDiv = document.createElement('div');
-  wrapDiv.className = 'bubble-wrap';
-
-  const bubble = document.createElement('div');
-  bubble.className = `bubble ${role} first-in-group last-in-group`;
-
-  // Safely render text (escape HTML, convert newlines to <br>)
-  bubble.innerHTML = escHtml(text).replace(/\n/g, '<br/>');
-
-  // Meta row (time + tick)
-  const meta = document.createElement('div');
-  meta.className = 'bubble-meta';
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  meta.innerHTML = `<span>${timeStr}</span>${role === 'user' ? '<span class="tick">✓✓</span>' : ''}`;
-
-  wrapDiv.appendChild(bubble);
-  wrapDiv.appendChild(meta);
-
-  if (role === 'bot') {
-    msgRow.appendChild(av);
-    msgRow.appendChild(wrapDiv);
-  } else {
-    msgRow.appendChild(wrapDiv);
-    msgRow.appendChild(av);
-  }
-
-  row.appendChild(msgRow);
-  area.appendChild(row);
-
-  if (atBottom) scrollBottom();
-  else showScrollBtn();
+  const wrapDiv = document.createElement('div'); wrapDiv.className = 'bubble-wrap';
+  const bubble = document.createElement('div'); bubble.className = `bubble ${role} first-in-group last-in-group`;
+  bubble.innerHTML = escHtml(displayText).replace(/\n/g, '<br/>');
+  const meta = document.createElement('div'); meta.className = 'bubble-meta';
+  const timeStr = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  meta.innerHTML = `<span>${timeStr}</span>${role==='user'?'<span class="tick">✓✓</span>':''} `;
+  wrapDiv.appendChild(bubble); wrapDiv.appendChild(meta);
+  if (role==='bot') { msgRow.appendChild(av); msgRow.appendChild(wrapDiv); }
+  else               { msgRow.appendChild(wrapDiv); msgRow.appendChild(av); }
+  row.appendChild(msgRow); area.appendChild(row);
+  if (atBottom) scrollBottom(); else showScrollBtn();
 }
 
-/* ── CREATE AVATAR ELEMENT ────────────────────────────── */
+/* ── CREATE AVATAR ELEMENT ────────────────────────────────── */
 function createAvatarEl(role) {
-  const av = document.createElement('div');
-  av.className = 'msg-avatar-sm';
-  if (role === 'bot') {
-    if (merchant.logo_url) {
-      av.innerHTML = `<img src="${escHtml(merchant.logo_url)}" alt="" />`;
-    } else {
-      av.textContent = (merchant.bot_name || 'B')[0].toUpperCase();
-    }
-    av.style.background = `linear-gradient(135deg, ${merchant.theme_color || '#6366f1'}, #a855f7)`;
+  const av = document.createElement('div'); av.className = 'msg-avatar-sm';
+  if (role==='bot') {
+    if (merchant.logo_url) av.innerHTML = `<img src="${escHtml(merchant.logo_url)}" alt=""/>`;
+    else av.textContent = (merchant.bot_name||'B')[0].toUpperCase();
+    av.style.background = `linear-gradient(135deg,${merchant.theme_color||'#6366f1'},#a855f7)`;
   } else {
-    av.textContent = customerName[0]?.toUpperCase() || 'Z';
-    av.style.background = 'var(--surface3)';
-    av.style.color = 'var(--text-sub)';
+    av.textContent = customerName[0]?.toUpperCase()||'Z';
+    av.style.background = 'var(--surface3)'; av.style.color = 'var(--text-sub)';
   }
   return av;
 }
 
-/* ── SCROLL HELPERS ───────────────────────────────────── */
+/* ── SCROLL / SCREEN / BANNER HELPERS ─────────────────────── */
 function scrollBottom() {
   const area = document.getElementById('messagesArea');
-  requestAnimationFrame(() => {
-    area.scrollTop = area.scrollHeight;
-    atBottom = true;
-    document.getElementById('scrollBtn').style.display = 'none';
-  });
+  requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; atBottom = true; document.getElementById('scrollBtn').style.display = 'none'; });
 }
-
 function handleScroll() {
   const area = document.getElementById('messagesArea');
   atBottom = area.scrollHeight - area.clientHeight - area.scrollTop < 60;
   if (atBottom) document.getElementById('scrollBtn').style.display = 'none';
 }
-
-function showScrollBtn() {
-  document.getElementById('scrollBtn').style.display = 'block';
-}
-
-/* ── STATUS BANNER ────────────────────────────────────── */
-function showBanner(msg, type = 'info') {
-  const el = document.getElementById('statusBanner');
-  el.textContent = msg;
+function showScrollBtn() { document.getElementById('scrollBtn').style.display = 'block'; }
+function showBanner(msg, type='info') {
+  const el = document.getElementById('statusBanner'); el.textContent = msg;
   el.className = `status-banner active ${type}`;
 }
-
-/* ── SCREEN MANAGER ───────────────────────────────────── */
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function showError(title, msg) {
-  document.getElementById('errorTitle').textContent = title || UI[uiLang].errorTitle;
-  document.getElementById('errorMsg').textContent   = msg   || UI[uiLang].errorMsg;
-  showScreen('errorScreen');
-}
-
-/* ── INPUT HELPERS ────────────────────────────────────── */
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 130) + 'px';
-}
-
-function handleKeyDown(e) {
-  // Send on Enter (not Shift+Enter)
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-}
-
-/* ── UTILS ────────────────────────────────────────────── */
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function showError(title, msg) { document.getElementById('errorTitle').textContent = title||'Error'; document.getElementById('errorMsg').textContent = msg||'Invalid link.'; showScreen('errorScreen'); }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight,130)+'px'; }
+function handleKeyDown(e) { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function escHtml(str) {
-  return (str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-/* ── MOBILE: prevent layout shift on virtual keyboard ── */
 window.visualViewport?.addEventListener('resize', () => {
-  if (document.getElementById('chatScreen').classList.contains('active')) {
-    scrollBottom();
-  }
+  if (document.getElementById('chatScreen').classList.contains('active')) scrollBottom();
 });
 </script>
 </body>
