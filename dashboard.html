@@ -3,333 +3,729 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>B-Chat — Dashboard</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>B-Chat &mdash; Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
-  :root { --accent:#6366f1; --accent2:#a855f7; }
-  *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'DM Sans',sans-serif; background:#07080f; color:#e2e8f0; min-height:100vh; }
-  h1,h2,h3,.display { font-family:'Syne',sans-serif; }
-  .app { display:flex; min-height:100vh; }
-  .sidebar { width:260px; min-height:100vh; flex-shrink:0; background:rgba(15,23,42,.9); border-right:1px solid rgba(255,255,255,.06); backdrop-filter:blur(20px); display:flex; flex-direction:column; padding:0 0 1.5rem; position:sticky; top:0; height:100vh; overflow-y:auto; }
-  .sidebar-logo { padding:1.5rem 1.5rem 1rem; font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem; background:linear-gradient(135deg,#6366f1,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; gap:.75rem; }
-  .nav-items { flex:1; padding:1rem .75rem; display:flex; flex-direction:column; gap:.25rem; }
-  .nav-item { display:flex; align-items:center; gap:.9rem; padding:.75rem 1rem; border-radius:12px; cursor:pointer; color:#64748b; font-weight:500; font-size:.9rem; transition:all .2s; border:1px solid transparent; }
-  .nav-item:hover { background:rgba(255,255,255,.05); color:#94a3b8; }
-  .nav-item.active { background:rgba(99,102,241,.15); border-color:rgba(99,102,241,.3); color:#a5b4fc; }
-  .nav-item .icon { font-size:1.2rem; width:24px; text-align:center; }
-  .sidebar-footer { padding:.75rem; border-top:1px solid rgba(255,255,255,.06); }
-  .user-card { display:flex; align-items:center; gap:.75rem; padding:.75rem; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
-  .user-avatar { width:38px; height:38px; border-radius:50%; overflow:hidden; flex-shrink:0; background:linear-gradient(135deg,#6366f1,#a855f7); display:flex; align-items:center; justify-content:center; font-size:1rem; color:#fff; }
-  .user-avatar img { width:100%; height:100%; object-fit:cover; }
-  .user-info { flex:1; min-width:0; }
-  .user-name { font-weight:600; font-size:.85rem; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .user-role { font-size:.75rem; color:#475569; }
-  .logout-btn { padding:.4rem .6rem; border-radius:8px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; cursor:pointer; font-size:.8rem; transition:all .2s; white-space:nowrap; }
-  .logout-btn:hover { background:rgba(239,68,68,.2); }
-  .main { flex:1; overflow-x:hidden; }
-  .topbar { padding:1.25rem 2rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,.06); background:rgba(7,8,15,.8); backdrop-filter:blur(20px); position:sticky; top:0; z-index:50; }
-  .topbar h1 { font-size:1.1rem; font-weight:700; color:#f1f5f9; }
-  .content { padding:1.75rem 2rem; max-width:860px; }
-  .glass { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:1.75rem; backdrop-filter:blur(12px); margin-bottom:1.5rem; }
-  .glass-dark { background:rgba(15,23,42,.7); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:1.1rem; }
-  .section-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.25rem; gap:.75rem; }
-  .section-title { font-size:1rem; font-weight:700; color:#f1f5f9; display:flex; align-items:center; gap:.5rem; }
-  .section-sub { font-size:.78rem; color:#475569; margin-top:.2rem; }
-  .form-label { display:block; font-size:.78rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem; }
-  .form-input { width:100%; padding:.7rem 1rem; border-radius:12px; outline:none; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; font-size:.9rem; font-family:'DM Sans',sans-serif; transition:border-color .2s,background .2s; }
-  .form-input:focus { border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.06); }
-  .form-input::placeholder { color:#334155; }
-  .form-select { width:100%; padding:.7rem 1rem; border-radius:12px; outline:none; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; font-size:.9rem; font-family:'DM Sans',sans-serif; cursor:pointer; transition:border-color .2s; -webkit-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%2364748b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .85rem center; padding-right:2.2rem; }
-  .form-select:focus { border-color:rgba(99,102,241,.6); background-color:rgba(99,102,241,.06); }
-  .form-select option { background:#1e293b; color:#e2e8f0; }
-  .form-textarea { width:100%; padding:.75rem 1rem; border-radius:12px; outline:none; resize:vertical; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; font-size:.9rem; font-family:'DM Sans',sans-serif; line-height:1.6; transition:border-color .2s,background .2s; min-height:90px; }
-  .form-textarea:focus { border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.06); }
-  .form-textarea::placeholder { color:#334155; }
-  .btn-primary { padding:.65rem 1.4rem; border-radius:12px; background:linear-gradient(135deg,#6366f1,#a855f7); color:#fff; font-weight:700; font-size:.9rem; border:none; cursor:pointer; transition:all .2s; box-shadow:0 0 20px rgba(99,102,241,.3); }
-  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 0 30px rgba(99,102,241,.5); }
-  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-  .btn-outline { padding:.55rem 1.1rem; border-radius:10px; background:transparent; border:1px solid rgba(255,255,255,.12); color:#94a3b8; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; }
-  .btn-outline:hover { background:rgba(255,255,255,.07); color:#e2e8f0; }
-  .btn-success { padding:.65rem 1.25rem; border-radius:12px; background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.3); color:#6ee7b7; font-weight:700; font-size:.875rem; cursor:pointer; transition:all .2s; }
-  .btn-success:hover { background:rgba(16,185,129,.25); }
-  .btn-add { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.55rem 1rem; border-radius:10px; background:rgba(99,102,241,.1); border:1.5px dashed rgba(99,102,241,.4); color:#a5b4fc; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; width:100%; }
-  .btn-add:hover { background:rgba(99,102,241,.2); border-color:rgba(99,102,241,.7); }
-  .btn-add-sm { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .85rem; border-radius:9px; background:rgba(99,102,241,.1); border:1.5px dashed rgba(99,102,241,.4); color:#a5b4fc; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .2s; }
-  .btn-add-sm:hover { background:rgba(99,102,241,.2); }
-  .btn-remove { width:30px; height:30px; border-radius:8px; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); color:#f87171; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; transition:all .2s; line-height:1; }
-  .btn-remove:hover { background:rgba(239,68,68,.22); }
-  .repeater-list { display:flex; flex-direction:column; gap:.6rem; margin-bottom:.85rem; }
-  .repeater-row { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:.85rem .9rem; animation:rowIn .2s ease both; }
-  @keyframes rowIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
-  .row-grid-ship { display:grid; grid-template-columns:1fr 100px 32px; gap:.6rem; align-items:end; }
-  .row-grid-prod { display:grid; grid-template-columns:1fr 90px 32px; gap:.6rem; align-items:end; margin-bottom:.6rem; }
-  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:1.5rem; }
-  .stat-card { padding:1.25rem; border-radius:16px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); }
-  .s-label { font-size:.72rem; color:#475569; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.4rem; }
-  .s-value { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:#f1f5f9; margin-bottom:.25rem; }
-  .s-sub { font-size:.75rem; color:#475569; }
-  .progress-track { height:6px; border-radius:999px; background:rgba(255,255,255,.07); overflow:hidden; margin-top:.5rem; }
-  .progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#6366f1,#a855f7); transition:width .5s ease; }
-  .tab-content { display:none; }
-  .tab-content.active { display:block; }
-  .alert { padding:.85rem 1rem; border-radius:12px; font-size:.85rem; margin-top:.75rem; }
-  .alert-success { background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.25); color:#6ee7b7; }
-  .alert-error   { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.25);  color:#fca5a5; }
-  .alert-info    { background:rgba(99,102,241,.08); border:1px solid rgba(99,102,241,.2);  color:#a5b4fc; }
-  .logo-upload-area { border:2px dashed rgba(255,255,255,.12); border-radius:16px; padding:1.25rem 2rem; text-align:center; cursor:pointer; transition:all .2s; }
-  .logo-upload-area:hover { border-color:rgba(99,102,241,.5); background:rgba(99,102,241,.05); }
-  .logo-preview { width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid rgba(99,102,241,.5); }
-  .color-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .2s; flex-shrink:0; }
-  .color-swatch.selected { border-color:#fff; transform:scale(1.15); box-shadow:0 0 12px rgba(255,255,255,.3); }
-  .link-box { display:flex; align-items:center; gap:.75rem; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.75rem 1rem; }
-  .link-url { flex:1; font-size:.8rem; color:#a5b4fc; word-break:break-all; }
-  .toaster { position:fixed; bottom:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; }
-  .toast { padding:.7rem 1.1rem; border-radius:12px; background:rgba(99,102,241,.92); color:#fff; font-size:.875rem; font-weight:600; box-shadow:0 8px 30px rgba(0,0,0,.4); animation:toastIn .3s ease both; backdrop-filter:blur(8px); max-width:320px; }
-  .toast.error { background:rgba(239,68,68,.92); }
-  @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
-  .json-preview { background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:1rem; font-family:monospace; font-size:.72rem; color:#64748b; white-space:pre-wrap; word-break:break-all; max-height:220px; overflow-y:auto; display:none; }
-  .json-preview.visible { display:block; }
-  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
-  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
-  @media(max-width:600px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .row-grid-ship { grid-template-columns:1fr 80px 32px; } .row-grid-prod { grid-template-columns:1fr 80px 32px; } }
-  @media(max-width:768px) { .sidebar { width:100%; min-height:auto; flex-direction:row; align-items:center; position:sticky; flex-shrink:1; border-right:none; border-bottom:1px solid rgba(255,255,255,.06); height:auto; overflow-y:visible; } .sidebar-logo { border-bottom:none; padding:1rem; } .nav-items { flex-direction:row; flex:1; padding:.5rem; overflow-x:auto; gap:.15rem; } .nav-item span.label { display:none; } .nav-item { padding:.6rem; } .sidebar-footer { display:none; } .app { flex-direction:column; } .main { width:100%; } .content { padding:1rem; } .topbar { padding:1rem; } }
-  [dir="rtl"] .sidebar { border-right:none; border-left:1px solid rgba(255,255,255,.06); }
-  [dir="rtl"] .toaster { left:1.25rem; right:auto; }
-  [dir="rtl"] .toast { animation-name:toastInRTL; }
-  @keyframes toastInRTL { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
-  [dir="rtl"] .form-label,[dir="rtl"] .form-input,[dir="rtl"] .form-textarea,[dir="rtl"] .form-select { text-align:right; }
-  [dir="rtl"] .link-box { flex-direction:row-reverse; }
-  [dir="rtl"] .nav-item { flex-direction:row-reverse; }
-  [dir="rtl"] .form-select { background-position:left .85rem center; padding-right:.9rem; padding-left:2.2rem; }
-  @media(max-width:768px) { [dir="rtl"] .sidebar { border-left:none; border-bottom:1px solid rgba(255,255,255,.06); } [dir="rtl"] .nav-items { flex-direction:row-reverse; } }
-  ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:#1e2035;border-radius:3px}
+/* ============================================================
+   DESIGN TOKENS
+============================================================ */
+:root {
+  --bg:#07080f; --bg2:#0d1117; --surface:rgba(255,255,255,.04);
+  --surface2:rgba(255,255,255,.07); --surface3:rgba(255,255,255,.10);
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
+  --text:#e2e8f0; --text-sub:#94a3b8; --text-muted:#475569;
+  --accent:#6366f1; --accent2:#a855f7;
+  --green:#10b981; --red:#ef4444; --amber:#f59e0b;
+  --navy:#0f172a;
+  --grad:linear-gradient(135deg,#6366f1,#a855f7);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+h1,h2,h3,.display{font-family:'Syne',sans-serif}
+
+/* ── LAYOUT ─── */
+.app{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ─── */
+.sidebar{
+  width:260px;min-height:100vh;flex-shrink:0;
+  background:rgba(15,23,42,.95);
+  border-right:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  display:flex;flex-direction:column;
+  padding:0 0 1.5rem;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-logo{
+  padding:1.5rem 1.5rem 1rem;font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;
+  background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;
+}
+.nav-items{flex:1;padding:1rem .75rem;display:flex;flex-direction:column;gap:.25rem}
+.nav-item{
+  display:flex;align-items:center;gap:.9rem;
+  padding:.75rem 1rem;border-radius:12px;cursor:pointer;
+  color:var(--text-muted);font-weight:500;font-size:.9rem;
+  transition:all .2s;border:1px solid transparent;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text-sub)}
+.nav-item.active{background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);color:#a5b4fc}
+.nav-item .icon{font-size:1.2rem;width:24px;text-align:center}
+.nav-separator{height:1px;background:var(--border);margin:.5rem .75rem}
+.nav-label{font-size:.65rem;font-weight:700;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;padding:.5rem 1rem .25rem}
+.sidebar-footer{padding:.75rem;border-top:1px solid var(--border)}
+.user-card{display:flex;align-items:center;gap:.75rem;padding:.75rem;border-radius:12px;background:var(--surface);border:1px solid var(--border)}
+.user-avatar{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:1rem;color:#fff}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+.user-info{flex:1;min-width:0}
+.user-name{font-weight:600;font-size:.85rem;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:.75rem;color:var(--text-muted)}
+.logout-btn{padding:.4rem .6rem;border-radius:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;cursor:pointer;font-size:.8rem;transition:all .2s;white-space:nowrap}
+.logout-btn:hover{background:rgba(239,68,68,.2)}
+
+/* ── MAIN ─── */
+.main{flex:1;overflow-x:hidden}
+.topbar{
+  padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:rgba(7,8,15,.85);
+  backdrop-filter:blur(20px);position:sticky;top:0;z-index:50;
+}
+.topbar h1{font-size:1.1rem;font-weight:700;color:#f1f5f9}
+.content{padding:1.75rem 2rem;max-width:920px}
+
+/* ── GLASS ─── */
+.glass{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1.75rem;backdrop-filter:blur(12px);margin-bottom:1.5rem}
+.glass-dark{background:rgba(15,23,42,.7);border:1px solid var(--border);border-radius:14px;padding:1.1rem}
+.glass-navy{
+  background:linear-gradient(135deg,rgba(15,23,42,.9),rgba(10,15,30,.95));
+  border:1px solid rgba(99,102,241,.2);border-radius:20px;
+  padding:1.75rem;margin-bottom:1.5rem;
+  box-shadow:0 8px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* ── SECTION HEADER ─── */
+.section-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:.75rem}
+.section-title{font-size:1rem;font-weight:700;color:#f1f5f9;display:flex;align-items:center;gap:.5rem}
+.section-sub{font-size:.78rem;color:var(--text-muted);margin-top:.2rem}
+
+/* ── FORMS ─── */
+.form-label{display:block;font-size:.78rem;font-weight:600;color:var(--text-sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.45rem}
+.form-input{
+  width:100%;padding:.7rem 1rem;border-radius:12px;outline:none;
+  background:rgba(255,255,255,.05);border:1.5px solid var(--border2);
+  color:var(--text);font-size:.9rem;font-family:'DM Sans',sans-serif;
+  transition:border-color .2s,background .2s;
+}
+.form-input:focus{border-color:rgba(99,102,241,.6);background:rgba(99,102,241,.06)}
+.form-input::placeholder{color:#334155}
+.form-input-lg{font-size:1.2rem;font-weight:700;text-align:center;padding:.85rem 1rem}
+.form-select{
+  width:100%;padding:.7rem 1rem;border-radius:12px;outline:none;
+  background:rgba(255,255,255,.05);border:1.5px solid var(--border2);
+  color:var(--text);font-size:.9rem;font-family:'DM Sans',sans-serif;cursor:pointer;
+  transition:border-color .2s;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%2364748b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .85rem center;padding-right:2.2rem;
+}
+.form-select:focus{border-color:rgba(99,102,241,.6);background-color:rgba(99,102,241,.06)}
+.form-select option{background:#1e293b;color:var(--text)}
+.form-textarea{
+  width:100%;padding:.75rem 1rem;border-radius:12px;outline:none;resize:vertical;
+  background:rgba(255,255,255,.05);border:1.5px solid var(--border2);
+  color:var(--text);font-size:.9rem;font-family:'DM Sans',sans-serif;line-height:1.6;
+  transition:border-color .2s,background .2s;min-height:90px;
+}
+.form-textarea:focus{border-color:rgba(99,102,241,.6);background:rgba(99,102,241,.06)}
+.form-textarea::placeholder{color:#334155}
+
+/* ── BUTTONS ─── */
+.btn-primary{padding:.65rem 1.4rem;border-radius:12px;background:var(--grad);color:#fff;font-weight:700;font-size:.9rem;border:none;cursor:pointer;transition:all .2s;box-shadow:0 0 20px rgba(99,102,241,.3)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(99,102,241,.5)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-outline{padding:.55rem 1.1rem;border-radius:10px;background:transparent;border:1px solid var(--border2);color:var(--text-sub);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-outline:hover{background:var(--surface2);color:var(--text)}
+.btn-success{padding:.65rem 1.25rem;border-radius:12px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;font-weight:700;font-size:.875rem;cursor:pointer;transition:all .2s}
+.btn-success:hover{background:rgba(16,185,129,.25)}
+.btn-add{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.55rem 1rem;border-radius:10px;background:rgba(99,102,241,.1);border:1.5px dashed rgba(99,102,241,.4);color:#a5b4fc;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;width:100%}
+.btn-add:hover{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.7)}
+.btn-add-sm{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border-radius:9px;background:rgba(99,102,241,.1);border:1.5px dashed rgba(99,102,241,.4);color:#a5b4fc;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-add-sm:hover{background:rgba(99,102,241,.2)}
+.btn-remove{width:30px;height:30px;border-radius:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;transition:all .2s;line-height:1}
+.btn-remove:hover{background:rgba(239,68,68,.22)}
+.btn-chip{padding:.4rem .9rem;border-radius:999px;background:var(--surface2);border:1px solid var(--border2);color:var(--text-sub);font-size:.78rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-chip:hover{background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.4);color:#a5b4fc}
+
+/* ── REPEATERS ─── */
+.repeater-list{display:flex;flex-direction:column;gap:.6rem;margin-bottom:.85rem}
+.repeater-row{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:.85rem .9rem;animation:rowIn .2s ease both}
+@keyframes rowIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.row-grid-ship{display:grid;grid-template-columns:1fr 100px 32px;gap:.6rem;align-items:end}
+.row-grid-prod{display:grid;grid-template-columns:1fr 90px 32px;gap:.6rem;align-items:end;margin-bottom:.6rem}
+
+/* ── STATS ─── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat-card{padding:1.25rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--border)}
+.s-label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
+.s-value{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#f1f5f9;margin-bottom:.25rem}
+.s-sub{font-size:.75rem;color:var(--text-muted)}
+.progress-track{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:.5rem}
+.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#a855f7);transition:width .5s ease}
+
+/* ── TABS ─── */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── ALERTS ─── */
+.alert{padding:.85rem 1rem;border-radius:12px;font-size:.85rem;margin-top:.75rem}
+.alert-success{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#6ee7b7}
+.alert-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5}
+.alert-info{background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);color:#a5b4fc}
+.alert-amber{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:#fcd34d}
+
+/* ── LOGO UPLOAD ─── */
+.logo-upload-area{border:2px dashed rgba(255,255,255,.12);border-radius:16px;padding:1.25rem 2rem;text-align:center;cursor:pointer;transition:all .2s}
+.logo-upload-area:hover{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.05)}
+.logo-preview{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(99,102,241,.5)}
+
+/* ── COLORS ─── */
+.color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .2s;flex-shrink:0}
+.color-swatch.selected{border-color:#fff;transform:scale(1.15);box-shadow:0 0 12px rgba(255,255,255,.3)}
+
+/* ── LINKS ─── */
+.link-box{display:flex;align-items:center;gap:.75rem;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem}
+.link-url{flex:1;font-size:.8rem;color:#a5b4fc;word-break:break-all}
+
+/* ── TOAST ─── */
+.toaster{position:fixed;bottom:1.25rem;right:1.25rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+.toast{padding:.7rem 1.1rem;border-radius:12px;background:rgba(99,102,241,.92);color:#fff;font-size:.875rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.4);animation:toastIn .3s ease both;backdrop-filter:blur(8px);max-width:320px}
+.toast.error{background:rgba(239,68,68,.92)}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── JSON PREVIEW ─── */
+.json-preview{background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:12px;padding:1rem;font-family:monospace;font-size:.72rem;color:#64748b;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto;display:none}
+.json-preview.visible{display:block}
+
+/* ── PROFIT CALC SPECIFIC ─── */
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem}
+.result-card{
+  padding:1.25rem;border-radius:16px;text-align:center;
+  background:linear-gradient(135deg,rgba(15,23,42,.9),rgba(10,15,28,.95));
+  border:1px solid var(--border2);
+  position:relative;overflow:hidden;
+}
+.result-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(99,102,241,.08),transparent);
+  pointer-events:none;
+}
+.result-card.highlight{border-color:rgba(99,102,241,.5);box-shadow:0 0 30px rgba(99,102,241,.15)}
+.result-card.green{border-color:rgba(16,185,129,.4);box-shadow:0 0 20px rgba(16,185,129,.1)}
+.result-label{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem}
+.result-value{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:#f1f5f9}
+.result-value.accent{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.result-value.green{color:#6ee7b7}
+.result-value.red{color:#f87171}
+.result-sub{font-size:.72rem;color:var(--text-muted);margin-top:.2rem}
+
+.chart-container{position:relative;height:260px;background:rgba(0,0,0,.3);border-radius:16px;border:1px solid var(--border);padding:1rem;margin-bottom:1.5rem}
+
+.input-group{position:relative}
+.input-prefix{position:absolute;top:50%;left:1rem;transform:translateY(-50%);font-size:.85rem;font-weight:700;color:var(--text-muted);pointer-events:none;z-index:1}
+[dir="rtl"] .input-prefix{left:auto;right:1rem}
+.input-with-prefix{padding-left:2.5rem}
+[dir="rtl"] .input-with-prefix{padding-left:1rem;padding-right:2.5rem}
+
+.slider-input{
+  width:100%;height:6px;-webkit-appearance:none;appearance:none;
+  background:linear-gradient(90deg,#6366f1,var(--bg2));
+  border-radius:3px;outline:none;cursor:pointer;margin-top:.75rem;
+}
+.slider-input::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#6366f1;cursor:pointer;box-shadow:0 0 8px rgba(99,102,241,.5)}
+
+.profit-badge{
+  display:inline-flex;align-items:center;gap:.4rem;
+  padding:.3rem .75rem;border-radius:999px;font-size:.78rem;font-weight:700;
+}
+.profit-badge.good{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7}
+.profit-badge.ok{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d}
+.profit-badge.bad{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171}
+
+/* ── AI ADVISOR CHAT ─── */
+.advisor-layout{display:grid;grid-template-columns:1fr 320px;gap:1.5rem;height:600px}
+@media(max-width:900px){.advisor-layout{grid-template-columns:1fr;height:auto}}
+.advisor-chat-wrap{display:flex;flex-direction:column;height:100%}
+.advisor-messages{
+  flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.75rem;
+  background:rgba(0,0,0,.25);border-radius:16px;border:1px solid var(--border);
+  min-height:300px;max-height:460px;
+}
+.advisor-messages::-webkit-scrollbar{width:4px}
+.advisor-messages::-webkit-scrollbar-track{background:transparent}
+.advisor-messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.adv-msg{padding:.75rem 1rem;border-radius:14px;font-size:.875rem;line-height:1.65;max-width:88%;animation:msgIn .2s ease both}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.adv-msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+[dir="rtl"] .adv-msg.user{border-bottom-right-radius:14px;border-bottom-left-radius:4px;align-self:flex-start}
+.adv-msg.bot{background:var(--surface2);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
+[dir="rtl"] .adv-msg.bot{border-bottom-left-radius:14px;border-bottom-right-radius:4px;align-self:flex-end}
+.adv-msg.system{background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);color:#a5b4fc;align-self:center;text-align:center;font-size:.8rem;max-width:100%;border-radius:10px}
+.adv-typing{display:flex;gap:5px;align-items:center;padding:.6rem 1rem;background:var(--surface2);border-radius:14px;border-bottom-left-radius:4px;align-self:flex-start;width:fit-content}
+.adv-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);animation:typeBounce 1.2s infinite ease}
+.adv-dot:nth-child(2){animation-delay:.2s}
+.adv-dot:nth-child(3){animation-delay:.4s}
+@keyframes typeBounce{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1.1);opacity:1}}
+.advisor-input-row{display:flex;gap:.5rem;margin-top:.75rem}
+.advisor-input-row textarea{
+  flex:1;padding:.65rem 1rem;border-radius:12px;outline:none;resize:none;
+  background:rgba(255,255,255,.05);border:1.5px solid var(--border2);
+  color:var(--text);font-size:.875rem;font-family:'DM Sans',sans-serif;
+  max-height:100px;overflow-y:auto;line-height:1.4;
+}
+.advisor-input-row textarea:focus{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.04)}
+.advisor-send-btn{
+  width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+  background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;box-shadow:0 4px 16px rgba(99,102,241,.4);align-self:flex-end;
+}
+.advisor-send-btn:hover{transform:scale(1.08);box-shadow:0 4px 24px rgba(99,102,241,.6)}
+.advisor-send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.quick-btns{display:flex;flex-direction:column;gap:.5rem}
+.advisor-sidebar{display:flex;flex-direction:column;gap:1rem}
+.context-card{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:14px;padding:1rem}
+.context-title{font-size:.75rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem}
+.context-row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.context-row:last-child{border-bottom:none}
+.context-key{font-size:.78rem;color:var(--text-muted)}
+.context-val{font-size:.82rem;font-weight:700;color:#f1f5f9}
+.context-val.green{color:#6ee7b7}
+.context-val.accent{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ── GRID ─── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem}
+
+/* ── RESPONSIVE ─── */
+@media(max-width:768px){
+  .sidebar{width:100%;min-height:auto;flex-direction:row;align-items:center;position:sticky;flex-shrink:1;border-right:none;border-bottom:1px solid var(--border);height:auto;overflow-y:visible}
+  .sidebar-logo{border-bottom:none;padding:1rem}
+  .nav-items{flex-direction:row;flex:1;padding:.5rem;overflow-x:auto;gap:.15rem}
+  .nav-item span.label,.nav-label,.nav-separator{display:none}
+  .nav-item{padding:.6rem}
+  .sidebar-footer{display:none}
+  .app{flex-direction:column}
+  .main{width:100%}
+  .content{padding:1rem}
+  .topbar{padding:1rem}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .result-grid{grid-template-columns:1fr 1fr}
+  .chart-container{height:200px}
+}
+@media(max-width:480px){.result-grid{grid-template-columns:1fr}}
+
+/* ── RTL ─── */
+[dir="rtl"] .sidebar{border-right:none;border-left:1px solid var(--border)}
+[dir="rtl"] .toaster{left:1.25rem;right:auto}
+[dir="rtl"] .toast{animation-name:toastInRTL}
+@keyframes toastInRTL{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+[dir="rtl"] .form-label,[dir="rtl"] .form-input,[dir="rtl"] .form-textarea,[dir="rtl"] .form-select{text-align:right}
+[dir="rtl"] .link-box{flex-direction:row-reverse}
+[dir="rtl"] .nav-item{flex-direction:row-reverse}
+[dir="rtl"] .form-select{background-position:left .85rem center;padding-right:.9rem;padding-left:2.2rem}
+[dir="rtl"] .advisor-input-row textarea{text-align:right}
+@media(max-width:768px){[dir="rtl"] .sidebar{border-left:none;border-bottom:1px solid var(--border)}[dir="rtl"] .nav-items{flex-direction:row-reverse}}
+
+/* ── SCROLLBAR ─── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1e2035;border-radius:3px}
 </style>
 </head>
 <body>
 <div class="toaster" id="toaster"></div>
 <div class="app">
 
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><span>⚡</span><span>B-Chat</span></div>
-    <nav class="nav-items">
-      <div class="nav-item active" onclick="showTab('customize')" id="nav-customize"><span class="icon">🎨</span><span class="label" data-i18n="tab_custom">Customize</span></div>
-      <div class="nav-item" onclick="showTab('brain')" id="nav-brain"><span class="icon">🧠</span><span class="label" data-i18n="tab_brain">Brain</span></div>
-      <div class="nav-item" onclick="showTab('analytics')" id="nav-analytics"><span class="icon">📊</span><span class="label" data-i18n="tab_analytics">Analytics</span></div>
-      <div class="nav-item" onclick="showTab('deploy')" id="nav-deploy"><span class="icon">🔗</span><span class="label" data-i18n="tab_deploy">Deploy</span></div>
-      <div class="nav-item" onclick="showTab('billing')" id="nav-billing"><span class="icon">💳</span><span class="label" data-i18n="tab_billing">Billing</span></div>
-    </nav>
-    <div class="sidebar-footer">
-      <div class="user-card">
-        <div class="user-avatar" id="sidebarAvatar">U</div>
-        <div class="user-info"><div class="user-name" id="sidebarName">Loading...</div><div class="user-role">Merchant</div></div>
-        <button class="logout-btn" onclick="doLogout()" data-i18n="logout">Out</button>
+<!-- ═══ SIDEBAR ═════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><span>&#9889;</span><span>B-Chat</span></div>
+  <nav class="nav-items">
+    <span class="nav-label">Store</span>
+    <div class="nav-item active" onclick="showTab('customize')" id="nav-customize">
+      <span class="icon">&#127912;</span><span class="label" data-i18n="tab_custom">Customize</span>
+    </div>
+    <div class="nav-item" onclick="showTab('brain')" id="nav-brain">
+      <span class="icon">&#129504;</span><span class="label" data-i18n="tab_brain">Brain</span>
+    </div>
+    <div class="nav-separator"></div>
+    <span class="nav-label">Growth</span>
+    <div class="nav-item" onclick="showTab('profit')" id="nav-profit">
+      <span class="icon">&#128200;</span><span class="label" id="nav-profit-label">Profit Engine</span>
+    </div>
+    <div class="nav-item" onclick="showTab('advisor')" id="nav-advisor">
+      <span class="icon">&#129302;</span><span class="label" id="nav-advisor-label">AI Advisor</span>
+    </div>
+    <div class="nav-separator"></div>
+    <span class="nav-label">Account</span>
+    <div class="nav-item" onclick="showTab('analytics')" id="nav-analytics">
+      <span class="icon">&#128202;</span><span class="label" data-i18n="tab_analytics">Analytics</span>
+    </div>
+    <div class="nav-item" onclick="showTab('deploy')" id="nav-deploy">
+      <span class="icon">&#128279;</span><span class="label" data-i18n="tab_deploy">Deploy</span>
+    </div>
+    <div class="nav-item" onclick="showTab('billing')" id="nav-billing">
+      <span class="icon">&#128179;</span><span class="label" data-i18n="tab_billing">Billing</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar" id="sidebarAvatar">U</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">Loading...</div><div class="user-role">Merchant</div></div>
+      <button class="logout-btn" onclick="doLogout()" data-i18n="logout">Out</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═════════════════════════════════════════ -->
+<main class="main">
+  <div class="topbar">
+    <h1 id="tabTitle" data-i18n="tab_custom">Customize</h1>
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <select style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:8px;padding:.3rem .6rem;font-size:.8rem;cursor:pointer;outline:none;"
+              id="langSelect" onchange="handleLangChange(this.value)">
+        <option value="en">&#127468;&#127463; EN</option>
+        <option value="ar">&#127474;&#127462; AR</option>
+        <option value="fr">&#127467;&#127479; FR</option>
+        <option value="es">&#127466;&#127480; ES</option>
+        <option value="de">&#127465;&#127466; DE</option>
+        <option value="sv">&#127480;&#127466; SV</option>
+      </select>
+      <button class="logout-btn" onclick="doLogout()" data-i18n="logout">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+  <!-- ═══ TAB: CUSTOMIZE ════════════════════════════ -->
+  <div class="tab-content active" id="tab-customize">
+    <div class="glass">
+      <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.5rem;">&#127912; <span data-i18n="tab_custom">Customize</span> Your Brand</h2>
+      <div style="margin-bottom:1.5rem;">
+        <label class="form-label" data-i18n="logo">Store Logo</label>
+        <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+          <div id="logoPreviewWrap" style="display:none;"><img id="logoPreviewImg" class="logo-preview" src="" alt="Logo"/></div>
+          <label class="logo-upload-area" for="logoFileInput" style="display:block;min-width:200px;">
+            <div style="font-size:2rem;margin-bottom:.5rem;">&#128247;</div>
+            <div style="font-size:.875rem;color:#94a3b8;" data-i18n="upload_logo">Upload Logo</div>
+            <div style="font-size:.75rem;color:#475569;margin-top:.25rem;">PNG, JPG &#183; Max 2MB</div>
+          </label>
+          <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoChange(event)"/>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:1.25rem;">
+        <div><label class="form-label" data-i18n="store_name_label">Store Name</label><input class="form-input" type="text" id="storeName" placeholder="My Store"/></div>
+        <div><label class="form-label" data-i18n="bot_name">Bot Name</label><input class="form-input" type="text" id="botName" placeholder="B-Chat Assistant"/></div>
+      </div>
+      <div style="margin-bottom:1.25rem;">
+        <label class="form-label" data-i18n="bio">Store Description</label>
+        <input class="form-input" type="text" id="storeBio" data-i18n-placeholder="bio_placeholder" placeholder="Brief description..."/>
+      </div>
+      <div style="margin-bottom:1.75rem;">
+        <label class="form-label" data-i18n="theme_color">Brand Color</label>
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+          <div class="color-swatch" style="background:#6366f1;" onclick="selectColor('#6366f1',this)" data-color="#6366f1"></div>
+          <div class="color-swatch" style="background:#a855f7;" onclick="selectColor('#a855f7',this)" data-color="#a855f7"></div>
+          <div class="color-swatch" style="background:#ec4899;" onclick="selectColor('#ec4899',this)" data-color="#ec4899"></div>
+          <div class="color-swatch" style="background:#10b981;" onclick="selectColor('#10b981',this)" data-color="#10b981"></div>
+          <div class="color-swatch" style="background:#f59e0b;" onclick="selectColor('#f59e0b',this)" data-color="#f59e0b"></div>
+          <div class="color-swatch" style="background:#3b82f6;" onclick="selectColor('#3b82f6',this)" data-color="#3b82f6"></div>
+          <div class="color-swatch" style="background:#ef4444;" onclick="selectColor('#ef4444',this)" data-color="#ef4444"></div>
+          <input type="color" id="customColorPicker" value="#6366f1" oninput="selectColor(this.value,null)" style="width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;padding:0;background:none;"/>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveCustomize()" id="saveCustomizeBtn" data-i18n="save">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: BRAIN ════════════════════════════════ -->
+  <div class="tab-content" id="tab-brain">
+    <div class="glass">
+      <div class="section-hdr">
+        <div><div class="section-title">&#127978; Store Info</div><div class="section-sub">&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1593;&#1575;&#1605;&#1577; &#1578;&#1587;&#1575;&#1593;&#1583; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1610;&#1578;&#1593;&#1585;&#1601; &#1593;&#1604;&#1609; &#1606;&#1588;&#1575;&#1591;&#1603;</div></div>
+      </div>
+      <div class="grid-3" style="margin-bottom:1.25rem;">
+        <div>
+          <label class="form-label">&#1606;&#1608;&#1593; &#1575;&#1604;&#1606;&#1588;&#1575;&#1591;</label>
+          <select class="form-select" id="businessType">
+            <option value="">&#1575;&#1582;&#1578;&#1585;...</option>
+            <option value="&#1605;&#1604;&#1575;&#1576;&#1587; &#1606;&#1587;&#1575;&#1574;&#1610;&#1577;">&#1605;&#1604;&#1575;&#1576;&#1587; &#1606;&#1587;&#1575;&#1574;&#1610;&#1577; &#128261;</option>
+            <option value="&#1605;&#1604;&#1575;&#1576;&#1587; &#1585;&#1580;&#1575;&#1604;&#1610;&#1577;">&#1605;&#1604;&#1575;&#1576;&#1587; &#1585;&#1580;&#1575;&#1604;&#1610;&#1577; &#128084;</option>
+            <option value="&#1571;&#1581;&#1584;&#1610;&#1577;">&#1571;&#1581;&#1584;&#1610;&#1577; &#128095;</option>
+            <option value="&#1573;&#1603;&#1587;&#1587;&#1608;&#1575;&#1585;&#1575;&#1578;">&#1573;&#1603;&#1587;&#1587;&#1608;&#1575;&#1585;&#1575;&#1578; &#128141;</option>
+            <option value="&#1593;&#1591;&#1608;&#1585;">&#1593;&#1591;&#1608;&#1585; &#127800;</option>
+            <option value="&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;&#1575;&#1578;">&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;&#1575;&#1578; &#128241;</option>
+            <option value="&#1605;&#1587;&#1578;&#1581;&#1590;&#1585;&#1575;&#1578; &#1578;&#1580;&#1605;&#1610;&#1604;">&#1605;&#1587;&#1578;&#1581;&#1590;&#1585;&#1575;&#1578; &#1578;&#1580;&#1605;&#1610;&#1604; &#128132;</option>
+            <option value="&#1571;&#1579;&#1575;&#1579; &#1605;&#1606;&#1586;&#1604;">&#1571;&#1579;&#1575;&#1579; &#1605;&#1606;&#1586;&#1604; &#128763;</option>
+            <option value="&#1571;&#1594;&#1584;&#1610;&#1577;">&#1571;&#1594;&#1584;&#1610;&#1577; &#127869;</option>
+            <option value="&#1582;&#1583;&#1605;&#1575;&#1578;">&#1582;&#1583;&#1605;&#1575;&#1578; &#128296;</option>
+            <option value="&#1571;&#1582;&#1585;&#1609;">&#1571;&#1582;&#1585;&#1609;</option>
+          </select>
+        </div>
+        <div><label class="form-label">&#1575;&#1604;&#1605;&#1583;&#1610;&#1606;&#1577; &#1575;&#1604;&#1585;&#1574;&#1610;&#1587;&#1610;&#1577;</label><input class="form-input" type="text" id="mainCity" placeholder="&#1605;&#1579;&#1575;&#1604;: &#1591;&#1606;&#1580;&#1577;"/></div>
+        <div>
+          <label class="form-label">&#1571;&#1587;&#1604;&#1608;&#1576; &#1575;&#1604;&#1585;&#1583;&#1608;&#1583;</label>
+          <select class="form-select" id="toneOfVoice">
+            <option value="friendly">&#1608;&#1583;&#1608;&#1583; &#128522;</option>
+            <option value="professional">&#1575;&#1581;&#1578;&#1585;&#1575;&#1601;&#1610; &#128188;</option>
+            <option value="casual">&#1594;&#1610;&#1585; &#1585;&#1587;&#1605;&#1610; &#128526;</option>
+            <option value="energetic">&#1581;&#1610;&#1608;&#1610; &#9889;</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:1.25rem;">
+        <label class="form-label" data-i18n="custom_prompt">&#1578;&#1593;&#1604;&#1610;&#1605;&#1575;&#1578; &#1573;&#1590;&#1575;&#1601;&#1610;&#1577;</label>
+        <textarea class="form-textarea" id="customPrompt" placeholder="&#1605;&#1579;&#1575;&#1604;: &#1583;&#1575;&#1610;&#1605;&#1575; &#1575;&#1591;&#1604;&#1576; &#1585;&#1602;&#1605; &#1575;&#1604;&#1607;&#1575;&#1578;&#1601; &#183; &#1604;&#1575; &#1578;&#1580;&#1575;&#1608;&#1576; &#1593;&#1604;&#1609; &#1575;&#1604;&#1605;&#1606;&#1575;&#1601;&#1587;&#1610;&#1606;"></textarea>
       </div>
     </div>
-  </aside>
+    <div class="glass">
+      <div class="section-hdr">
+        <div><div class="section-title">&#128666; &#1605;&#1606;&#1575;&#1591;&#1602; &#1575;&#1604;&#1578;&#1608;&#1589;&#1610;&#1604;</div><div class="section-sub">&#1571;&#1590;&#1601; &#1575;&#1604;&#1605;&#1583;&#1606; &#1608;&#1587;&#1593;&#1585; &#1575;&#1604;&#1578;&#1608;&#1589;&#1610;&#1604;</div></div>
+        <button class="btn-add-sm" onclick="addShippingRow()">+ &#1573;&#1590;&#1575;&#1601;&#1577;</button>
+      </div>
+      <div class="repeater-list" id="shippingList"></div>
+      <button class="btn-add" onclick="addShippingRow()">+ &#1571;&#1590;&#1601; &#1605;&#1583;&#1610;&#1606;&#1577; &#1578;&#1608;&#1589;&#1610;&#1604;</button>
+    </div>
+    <div class="glass">
+      <div class="section-hdr">
+        <div><div class="section-title">&#128717; &#1603;&#1578;&#1575;&#1604;&#1608;&#1580; &#1575;&#1604;&#1605;&#1606;&#1578;&#1580;&#1575;&#1578;</div><div class="section-sub">&#1571;&#1590;&#1601; &#1605;&#1606;&#1578;&#1580;&#1575;&#1578;&#1603; &#1576;&#1575;&#1604;&#1578;&#1601;&#1575;&#1589;&#1610;&#1604;</div></div>
+        <button class="btn-add-sm" onclick="addProductRow()">+ &#1573;&#1590;&#1575;&#1601;&#1577;</button>
+      </div>
+      <div class="repeater-list" id="productList"></div>
+      <button class="btn-add" onclick="addProductRow()">+ &#1571;&#1590;&#1601; &#1605;&#1606;&#1578;&#1580; &#1580;&#1583;&#1610;&#1583;</button>
+    </div>
+    <div class="glass">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;">
+        <div><div class="section-title">&#128190; &#1581;&#1601;&#1592; &#1575;&#1604;&#1584;&#1575;&#1603;&#1585;&#1577;</div></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button class="btn-outline" onclick="toggleJsonPreview()" style="font-size:.8rem;">&#128065; JSON</button>
+          <button class="btn-primary" onclick="saveBrain()" id="saveBrainBtn" data-i18n="save">&#128190; Save</button>
+        </div>
+      </div>
+      <pre class="json-preview" id="jsonPreview"></pre>
+    </div>
+  </div>
 
-  <main class="main">
-    <div class="topbar">
-      <h1 id="tabTitle" data-i18n="tab_custom">Customize</h1>
+  <!-- ═══ TAB: PROFIT ENGINE ════════════════════════ -->
+  <div class="tab-content" id="tab-profit">
+
+    <!-- Header -->
+    <div class="glass-navy" style="margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.35rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(99,102,241,.4),rgba(168,85,247,.3));display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:1px solid rgba(99,102,241,.3);">&#128200;</div>
+            <h2 style="font-size:1.3rem;font-weight:800;color:#f1f5f9;" id="profit-title">Profit Engine</h2>
+          </div>
+          <p style="font-size:.875rem;color:var(--text-muted);" id="profit-sub">Calculate your real profit and find the optimal selling price.</p>
+        </div>
+        <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+          <button class="btn-outline" onclick="resetCalc()" style="font-size:.82rem;">&#128260; Reset</button>
+          <button class="btn-success" onclick="saveFinancialData()" id="saveFinBtn" style="font-size:.82rem;">&#128190; <span id="save-fin-label">Save Data</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inputs -->
+    <div class="glass-navy">
+      <div class="section-title" style="margin-bottom:1.25rem;">&#127919; Cost Inputs</div>
+      <div class="grid-4" style="margin-bottom:1.5rem;">
+        <div>
+          <label class="form-label" id="lbl-product-cost">Product Cost</label>
+          <div class="input-group">
+            <span class="input-prefix" id="currency-prefix">MAD</span>
+            <input class="form-input input-with-prefix" type="number" id="productCost" placeholder="0" min="0" oninput="recalculate()"/>
+          </div>
+        </div>
+        <div>
+          <label class="form-label" id="lbl-shipping-cost">Shipping Cost</label>
+          <div class="input-group">
+            <span class="input-prefix" id="currency-prefix2">MAD</span>
+            <input class="form-input input-with-prefix" type="number" id="shippingCostCalc" placeholder="0" min="0" oninput="recalculate()"/>
+          </div>
+        </div>
+        <div>
+          <label class="form-label" id="lbl-ad-spend">Ad Spend / Sale</label>
+          <div class="input-group">
+            <span class="input-prefix" id="currency-prefix3">MAD</span>
+            <input class="form-input input-with-prefix" type="number" id="adSpend" placeholder="0" min="0" oninput="recalculate()"/>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Currency</label>
+          <select class="form-select" id="calcCurrency" onchange="updateCurrencyPrefix();recalculate()">
+            <option value="MAD">&#127474;&#127462; MAD (DH)</option>
+            <option value="USD">&#127482;&#127480; USD ($)</option>
+            <option value="EUR">&#127466;&#127482; EUR (&#8364;)</option>
+            <option value="GBP">&#127468;&#127463; GBP (&#163;)</option>
+            <option value="SAR">&#127480;&#127462; SAR (&#x631;&#x633;)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+          <label class="form-label" id="lbl-target-margin">Target Margin %</label>
+          <span style="font-size:1rem;font-weight:800;color:#a5b4fc;" id="marginDisplay">40%</span>
+        </div>
+        <input type="range" class="slider-input" id="targetMargin" min="5" max="80" value="40" oninput="document.getElementById('marginDisplay').textContent=this.value+'%';recalculate()"/>
+        <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted);margin-top:.25rem;"><span>5%</span><span>Low Risk</span><span>Optimal</span><span>Premium</span><span>80%</span></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="result-grid" id="resultsArea" style="display:none;">
+      <div class="result-card">
+        <div class="result-label" id="lbl-min-price">Minimum Price</div>
+        <div class="result-value" id="res-min-price">0</div>
+        <div class="result-sub">Break-even point</div>
+      </div>
+      <div class="result-card highlight">
+        <div class="result-label" id="lbl-rec-price">Recommended Price</div>
+        <div class="result-value accent" id="res-rec-price">0</div>
+        <div class="result-sub" id="res-margin-badge">with target margin</div>
+      </div>
+      <div class="result-card green">
+        <div class="result-label" id="lbl-net-profit">Net Profit / Sale</div>
+        <div class="result-value green" id="res-net-profit">0</div>
+        <div class="result-sub" id="res-roi-line">ROI: 0%</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label" id="lbl-breakeven">Break-even Qty</div>
+        <div class="result-value" id="res-breakeven">0</div>
+        <div class="result-sub">monthly (est.)</div>
+      </div>
+    </div>
+
+    <!-- Profit Health Badge -->
+    <div id="profitHealthWrap" style="display:none;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+        <span id="profitHealthBadge" class="profit-badge good">&#128994; Healthy Margin</span>
+        <span style="font-size:.82rem;color:var(--text-muted);" id="profitHealthMsg"></span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="glass-navy" id="chartWrap" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="section-title" id="chart-title">Profit Curve &#8212; Price vs Profit</div>
+        <div style="display:flex;gap:.3rem;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#6366f1;display:inline-block;"></span>
+          <span style="font-size:.72rem;color:var(--text-muted);" id="chart-profit-legend">Net Profit</span>
+        </div>
+      </div>
+      <div class="chart-container" style="background:transparent;border:none;padding:0;">
+        <canvas id="profitChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="glass-navy" id="calcEmptyState" style="text-align:center;padding:3rem 2rem;">
+      <div style="font-size:3rem;margin-bottom:1rem;">&#128200;</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;" id="calc-empty-title">Enter your costs above</div>
+      <div style="font-size:.875rem;color:var(--text-muted);" id="calc-empty-sub">Fill in the fields to see your profit analysis and curve.</div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: AI ADVISOR ════════════════════════════ -->
+  <div class="tab-content" id="tab-advisor">
+    <div class="glass-navy" style="margin-bottom:1.25rem;">
       <div style="display:flex;align-items:center;gap:.75rem;">
-        <select style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:8px;padding:.3rem .6rem;font-size:.8rem;cursor:pointer;outline:none;" id="langSelect" onchange="setLang(this.value);applyLang(this.value);document.documentElement.dir=(this.value==='ar'?'rtl':'ltr')">
-          <option value="en">🇬🇧 EN</option><option value="ar">🇸🇦 AR</option><option value="fr">🇫🇷 FR</option><option value="es">🇪🇸 ES</option><option value="de">🇩🇪 DE</option><option value="sv">🇸🇪 SV</option>
-        </select>
-        <button class="logout-btn" onclick="doLogout()" data-i18n="logout">Logout</button>
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(168,85,247,.4),rgba(99,102,241,.3));display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:1px solid rgba(168,85,247,.3);">&#129302;</div>
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;" id="advisor-title">AI Growth Advisor</h2>
+          <p style="font-size:.8rem;color:var(--text-muted);" id="advisor-sub">Your personal e-commerce consultant.</p>
+        </div>
       </div>
     </div>
-    <div class="content">
 
-      <!-- TAB: CUSTOMIZE -->
-      <div class="tab-content active" id="tab-customize">
-        <div class="glass">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.5rem;">&#127912; <span data-i18n="tab_custom">Customize</span> Your Brand</h2>
-          <div style="margin-bottom:1.5rem;">
-            <label class="form-label" data-i18n="logo">Store Logo</label>
-            <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-              <div id="logoPreviewWrap" style="display:none;"><img id="logoPreviewImg" class="logo-preview" src="" alt="Logo"/></div>
-              <div>
-                <label class="logo-upload-area" for="logoFileInput" style="display:block;min-width:200px;">
-                  <div style="font-size:2rem;margin-bottom:.5rem;">&#128247;</div>
-                  <div style="font-size:.875rem;color:#94a3b8;" data-i18n="upload_logo">Upload Logo</div>
-                  <div style="font-size:.75rem;color:#475569;margin-top:.25rem;">PNG, JPG, SVG &middot; Max 2MB</div>
-                </label>
-                <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoChange(event)"/>
-              </div>
-            </div>
-          </div>
-          <div class="grid-2" style="margin-bottom:1.25rem;">
-            <div><label class="form-label" data-i18n="store_name_label">Store Name</label><input class="form-input" type="text" id="storeName" placeholder="My Store"/></div>
-            <div><label class="form-label" data-i18n="bot_name">Bot Name</label><input class="form-input" type="text" id="botName" placeholder="B-Chat Assistant"/></div>
-          </div>
-          <div style="margin-bottom:1.25rem;">
-            <label class="form-label" data-i18n="bio">Store Description</label>
-            <input class="form-input" type="text" id="storeBio" data-i18n-placeholder="bio_placeholder" placeholder="Brief description shown on the chat welcome page..."/>
-          </div>
-          <div style="margin-bottom:1.75rem;">
-            <label class="form-label" data-i18n="theme_color">Brand Color</label>
-            <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-              <div class="color-swatch" style="background:#6366f1;" onclick="selectColor('#6366f1',this)" data-color="#6366f1"></div>
-              <div class="color-swatch" style="background:#a855f7;" onclick="selectColor('#a855f7',this)" data-color="#a855f7"></div>
-              <div class="color-swatch" style="background:#ec4899;" onclick="selectColor('#ec4899',this)" data-color="#ec4899"></div>
-              <div class="color-swatch" style="background:#10b981;" onclick="selectColor('#10b981',this)" data-color="#10b981"></div>
-              <div class="color-swatch" style="background:#f59e0b;" onclick="selectColor('#f59e0b',this)" data-color="#f59e0b"></div>
-              <div class="color-swatch" style="background:#3b82f6;" onclick="selectColor('#3b82f6',this)" data-color="#3b82f6"></div>
-              <div class="color-swatch" style="background:#ef4444;" onclick="selectColor('#ef4444',this)" data-color="#ef4444"></div>
-              <input type="color" id="customColorPicker" value="#6366f1" oninput="selectColor(this.value,null)" title="Custom Color" style="width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;padding:0;background:none;"/>
-            </div>
-          </div>
-          <button class="btn-primary" onclick="saveCustomize()" id="saveCustomizeBtn" data-i18n="save">Save Changes</button>
+    <div class="advisor-layout">
+      <!-- Chat -->
+      <div class="advisor-chat-wrap">
+        <div class="advisor-messages" id="advisorMessages">
+          <div class="adv-msg system" id="advisorWelcome">Ask me about your profit margins, pricing strategy, or how to increase sales.</div>
+        </div>
+        <!-- Quick chips -->
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.65rem;margin-bottom:.5rem;">
+          <button class="btn-chip" onclick="sendAdvisorChip(0)" id="chip0">How to increase margin?</button>
+          <button class="btn-chip" onclick="sendAdvisorChip(1)" id="chip1">Best price for products?</button>
+          <button class="btn-chip" onclick="sendAdvisorChip(2)" id="chip2">How to cut costs?</button>
+          <button class="btn-chip" onclick="sendAdvisorAutoAnalyze()" style="background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.4);color:#a5b4fc;" id="chip-auto">&#129504; Auto-Analyze</button>
+        </div>
+        <div class="advisor-input-row">
+          <textarea id="advisorInput" rows="1" placeholder="Ask me anything about your business..." oninput="autoResizeAdvisor(this)" onkeydown="advisorKeyDown(event)"></textarea>
+          <button class="advisor-send-btn" id="advisorSendBtn" onclick="sendAdvisorMessage()" title="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
         </div>
       </div>
 
-      <!-- TAB: BRAIN — FULLY STRUCTURED -->
-      <div class="tab-content" id="tab-brain">
-
-        <!-- Section 1: Store Info -->
-        <div class="glass">
-          <div class="section-hdr">
-            <div>
-              <div class="section-title">&#127978; Store Info</div>
-              <div class="section-sub">&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1593;&#1575;&#1605;&#1577; &mdash; &#1603;&#1578;&#1587;&#1575;&#1593;&#1583; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1610;&#1578;&#1593;&#1585;&#1601; &#1593;&#1604;&#1609; &#1606;&#1588;&#1575;&#1591;&#1603; &#1575;&#1604;&#1578;&#1580;&#1575;&#1585;&#1610;</div>
-            </div>
-          </div>
-          <div class="grid-3" style="margin-bottom:1.25rem;">
-            <div>
-              <label class="form-label">&#1606;&#1608;&#1593; &#1575;&#1604;&#1606;&#1588;&#1575;&#1591;</label>
-              <select class="form-select" id="businessType">
-                <option value="">&#1575;&#1582;&#1578;&#1585;...</option>
-                <option value="&#1605;&#1604;&#1575;&#1576;&#1587; &#1606;&#1587;&#1575;&#1574;&#1610;&#1577;">&#1605;&#1604;&#1575;&#1576;&#1587; &#1606;&#1587;&#1575;&#1574;&#1610;&#1577; &#128261;</option>
-                <option value="&#1605;&#1604;&#1575;&#1576;&#1587; &#1585;&#1580;&#1575;&#1604;&#1610;&#1577;">&#1605;&#1604;&#1575;&#1576;&#1587; &#1585;&#1580;&#1575;&#1604;&#1610;&#1577; &#128084;</option>
-                <option value="&#1571;&#1581;&#1584;&#1610;&#1577;">&#1571;&#1581;&#1584;&#1610;&#1577; &#128095;</option>
-                <option value="&#1573;&#1603;&#1587;&#1587;&#1608;&#1575;&#1585;&#1575;&#1578;">&#1573;&#1603;&#1587;&#1587;&#1608;&#1575;&#1585;&#1575;&#1578; &#128141;</option>
-                <option value="&#1593;&#1591;&#1608;&#1585;">&#1593;&#1591;&#1608;&#1585; &#127800;</option>
-                <option value="&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;&#1575;&#1578;">&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;&#1575;&#1578; &#128241;</option>
-                <option value="&#1605;&#1587;&#1578;&#1581;&#1590;&#1585;&#1575;&#1578; &#1578;&#1580;&#1605;&#1610;&#1604;">&#1605;&#1587;&#1578;&#1581;&#1590;&#1585;&#1575;&#1578; &#1578;&#1580;&#1605;&#1610;&#1604; &#128132;</option>
-                <option value="&#1571;&#1579;&#1575;&#1579; &#1605;&#1606;&#1586;&#1604;">&#1571;&#1579;&#1575;&#1579; &#1605;&#1606;&#1586;&#1604; &#128763;</option>
-                <option value="&#1571;&#1594;&#1584;&#1610;&#1577;">&#1571;&#1594;&#1584;&#1610;&#1577; &#127869;</option>
-                <option value="&#1582;&#1583;&#1605;&#1575;&#1578;">&#1582;&#1583;&#1605;&#1575;&#1578; &#128296;</option>
-                <option value="&#1571;&#1582;&#1585;&#1609;">&#1571;&#1582;&#1585;&#1609;</option>
-              </select>
-            </div>
-            <div>
-              <label class="form-label">&#1575;&#1604;&#1605;&#1583;&#1610;&#1606;&#1577; &#1575;&#1604;&#1585;&#1574;&#1610;&#1587;&#1610;&#1577;</label>
-              <input class="form-input" type="text" id="mainCity" placeholder="&#1605;&#1579;&#1575;&#1604;: &#1591;&#1606;&#1580;&#1577;"/>
-            </div>
-            <div>
-              <label class="form-label">&#1571;&#1587;&#1604;&#1608;&#1576; &#1575;&#1604;&#1585;&#1583;&#1608;&#1583;</label>
-              <select class="form-select" id="toneOfVoice">
-                <option value="friendly">&#1608;&#1583;&#1608;&#1583; &#128522;</option>
-                <option value="professional">&#1575;&#1581;&#1578;&#1585;&#1575;&#1601;&#1610; &#128188;</option>
-                <option value="casual">&#1594;&#1610;&#1585; &#1585;&#1587;&#1605;&#1610; &#128526;</option>
-                <option value="energetic">&#1581;&#1610;&#1608;&#1610; &#9889;</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="form-label" data-i18n="custom_prompt">&#1578;&#1593;&#1604;&#1610;&#1605;&#1575;&#1578; &#1573;&#1590;&#1575;&#1601;&#1610;&#1577; (&#1575;&#1582;&#1578;&#1610;&#1575;&#1585;&#1610;)</label>
-            <textarea class="form-textarea" id="customPrompt" placeholder="&#1605;&#1579;&#1575;&#1604;: &#1583;&#1575;&#1610;&#1605;&#1575; &#1575;&#1591;&#1604;&#1576; &#1585;&#1602;&#1605; &#1575;&#1604;&#1607;&#1575;&#1578;&#1601; &#1601;&#1610; &#1606;&#1607;&#1575;&#1610;&#1577; &#1575;&#1604;&#1605;&#1581;&#1575;&#1583;&#1579;&#1577; &#183; &#1604;&#1575; &#1578;&#1580;&#1575;&#1608;&#1576; &#1593;&#1604;&#1609; &#1575;&#1604;&#1605;&#1606;&#1575;&#1601;&#1587;&#1610;&#1606;"></textarea>
-            <p style="font-size:.72rem;color:#475569;margin-top:.35rem;">&#128161; &#1607;&#1584;&#1607; &#1575;&#1604;&#1578;&#1593;&#1604;&#1610;&#1605;&#1575;&#1578; &#1578;&#1581;&#1583;&#1583; &#1588;&#1582;&#1589;&#1610;&#1577; &#1608;&#1605;&#1607;&#1605;&#1577; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578;.</p>
-          </div>
+      <!-- Sidebar context panel -->
+      <div class="advisor-sidebar">
+        <div class="context-card">
+          <div class="context-title">&#128202; Profit Snapshot</div>
+          <div class="context-row"><span class="context-key">Total Cost</span><span class="context-val" id="ctx-total-cost">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">Rec. Price</span><span class="context-val accent" id="ctx-rec-price">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">Net Profit</span><span class="context-val green" id="ctx-net-profit">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">ROI</span><span class="context-val" id="ctx-roi">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">Margin</span><span class="context-val" id="ctx-margin">&#8212;</span></div>
         </div>
-
-        <!-- Section 2: Shipping Zones Repeater -->
-        <div class="glass">
-          <div class="section-hdr">
-            <div>
-              <div class="section-title">&#128666; &#1605;&#1606;&#1575;&#1591;&#1602; &#1575;&#1604;&#1578;&#1608;&#1589;&#1610;&#1604;</div>
-              <div class="section-sub">&#1571;&#1590;&#1601; &#1575;&#1604;&#1605;&#1583;&#1606; &#1608;&#1587;&#1593;&#1585; &#1575;&#1604;&#1578;&#1608;&#1589;&#1610;&#1604; &mdash; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1603;&#1610;&#1581;&#1587;&#1576; &#1578;&#1604;&#1602;&#1575;&#1574;&#1610;&#1575;&#1611;</div>
-            </div>
-            <button class="btn-add-sm" onclick="addShippingRow()">+ &#1573;&#1590;&#1575;&#1601;&#1577; &#1605;&#1583;&#1610;&#1606;&#1577;</button>
-          </div>
-          <div class="repeater-list" id="shippingList"></div>
-          <button class="btn-add" onclick="addShippingRow()" id="addShippingBtn">+ &#1571;&#1590;&#1601; &#1605;&#1583;&#1610;&#1606;&#1577; &#1578;&#1608;&#1589;&#1610;&#1604;</button>
-          <div class="alert alert-info" style="margin-top:1rem;">&#128161; <strong>&#1605;&#1579;&#1575;&#1604;:</strong> &#1591;&#1606;&#1580;&#1577; &mdash; 20 &#1583;&#1585;&#1607;&#1605; &nbsp;&#183;&nbsp; &#1575;&#1604;&#1583;&#1575;&#1585; &#1575;&#1604;&#1576;&#1610;&#1590;&#1575;&#1569; &mdash; 35 &#1583;&#1585;&#1607;&#1605; &nbsp;&#183;&nbsp; &#1601;&#1575;&#1587; &mdash; 25 &#1583;&#1585;&#1607;&#1605;</div>
+        <div class="context-card">
+          <div class="context-title">&#127978; Store Info</div>
+          <div class="context-row"><span class="context-key">Store</span><span class="context-val" id="ctx-store">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">Type</span><span class="context-val" id="ctx-type">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">Products</span><span class="context-val" id="ctx-products">&#8212;</span></div>
+          <div class="context-row"><span class="context-key">City</span><span class="context-val" id="ctx-city">&#8212;</span></div>
         </div>
-
-        <!-- Section 3: Product Catalog Repeater -->
-        <div class="glass">
-          <div class="section-hdr">
-            <div>
-              <div class="section-title">&#128717; &#1603;&#1578;&#1575;&#1604;&#1608;&#1580; &#1575;&#1604;&#1605;&#1606;&#1578;&#1580;&#1575;&#1578;</div>
-              <div class="section-sub">&#1571;&#1590;&#1601; &#1605;&#1606;&#1578;&#1580;&#1575;&#1578;&#1603; &mdash; &#1575;&#1604;&#1585;&#1608;&#1576;&#1608;&#1578; &#1603;&#1610;&#1580;&#1575;&#1608;&#1576; &#1593;&#1604;&#1609; &#1575;&#1604;&#1571;&#1587;&#1593;&#1575;&#1585; &#1608;&#1575;&#1604;&#1605;&#1608;&#1575;&#1589;&#1601;&#1575;&#1578;</div>
-            </div>
-            <button class="btn-add-sm" onclick="addProductRow()">+ &#1573;&#1590;&#1575;&#1601;&#1577; &#1605;&#1606;&#1578;&#1580;</button>
-          </div>
-          <div class="repeater-list" id="productList"></div>
-          <button class="btn-add" onclick="addProductRow()" id="addProductBtn">+ &#1571;&#1590;&#1601; &#1605;&#1606;&#1578;&#1580; &#1580;&#1583;&#1610;&#1583;</button>
-          <div class="alert alert-info" style="margin-top:1rem;">&#128161; <strong>&#1605;&#1579;&#1575;&#1604;:</strong> &#1585;&#1608;&#1576; &#1581;&#1605;&#1585;&#1575;&#1569; &mdash; 299 &#1583;&#1585;&#1607;&#1605; &mdash; &#1605;&#1578;&#1608;&#1601;&#1585;&#1577; &#1601;&#1610; S/M/L&#1548; &#1604;&#1608;&#1606; &#1571;&#1581;&#1605;&#1585; &#1608;&#1571;&#1576;&#1610;&#1590;</div>
-        </div>
-
-        <!-- Save section -->
-        <div class="glass">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;">
-            <div>
-              <div class="section-title">&#128190; &#1581;&#1601;&#1592; &#1575;&#1604;&#1584;&#1575;&#1603;&#1585;&#1577;</div>
-              <div class="section-sub">&#1580;&#1605;&#1610;&#1593; &#1575;&#1604;&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1603;&#1578;&#1578;&#1581;&#1608;&#1604; &#1573;&#1604;&#1609; JSON &#1608;&#1578;&#1615;&#1581;&#1601;&#1592; &#1601;&#1610; &#1602;&#1575;&#1593;&#1583;&#1577; &#1575;&#1604;&#1576;&#1610;&#1575;&#1606;&#1575;&#1578;</div>
-            </div>
-            <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
-              <button class="btn-outline" onclick="toggleJsonPreview()" style="font-size:.8rem;">&#128065; &#1605;&#1593;&#1575;&#1610;&#1606;&#1577; JSON</button>
-              <button class="btn-primary" onclick="saveBrain()" id="saveBrainBtn" data-i18n="save">&#128190; &#1581;&#1601;&#1592; &#1575;&#1604;&#1578;&#1594;&#1610;&#1610;&#1585;&#1575;&#1578;</button>
-            </div>
-          </div>
-          <pre class="json-preview" id="jsonPreview"></pre>
+        <div class="alert alert-info" style="margin-top:0;">
+          &#128161; Go to <strong>Profit Engine</strong> first to fill in your financial data for better analysis.
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- TAB: ANALYTICS -->
-      <div class="tab-content" id="tab-analytics">
-        <div class="stat-grid">
-          <div class="stat-card"><div class="s-label" data-i18n="msgs_left">Messages Left</div><div class="s-value" id="statsMessages">&#8212;</div><div class="progress-track"><div class="progress-fill" id="msgProgress" style="width:100%"></div></div><div class="s-sub">out of 1,000</div></div>
-          <div class="stat-card"><div class="s-label" data-i18n="days_left">Days Left</div><div class="s-value" id="statsDays">&#8212;</div><div class="progress-track"><div class="progress-fill" id="daysProgress" style="width:100%;background:linear-gradient(90deg,#10b981,#059669)"></div></div><div class="s-sub" id="subExpires">&#8212;</div></div>
-          <div class="stat-card"><div class="s-label">Conversations</div><div class="s-value" id="statsConvs">&#8212;</div><div class="s-sub">All time</div></div>
-        </div>
-        <div class="glass">
-          <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.25rem;">&#128200; Usage Overview</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-            <div class="glass-dark"><div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Message Balance</div><div style="display:flex;align-items:baseline;gap:.3rem;"><span style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:#a5b4fc;" id="balanceBig">&#8212;</span><span style="font-size:.8rem;color:#475569;">/ 1000</span></div></div>
-            <div class="glass-dark"><div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Subscription Ends</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#6ee7b7;" id="subEndBig">&#8212;</div></div>
-          </div>
-          <div style="margin-top:1.25rem;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;"><span style="font-size:.85rem;color:#94a3b8;">Message Usage</span><span style="font-size:.85rem;color:#a5b4fc;" id="usagePercent">0%</span></div><div class="progress-track" style="height:10px;"><div class="progress-fill" id="usageBar" style="width:0%"></div></div></div>
-        </div>
+  <!-- ═══ TAB: ANALYTICS ════════════════════════════ -->
+  <div class="tab-content" id="tab-analytics">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="s-label" data-i18n="msgs_left">Messages Left</div><div class="s-value" id="statsMessages">&#8212;</div><div class="progress-track"><div class="progress-fill" id="msgProgress" style="width:100%"></div></div><div class="s-sub">out of 1,000</div></div>
+      <div class="stat-card"><div class="s-label" data-i18n="days_left">Days Left</div><div class="s-value" id="statsDays">&#8212;</div><div class="progress-track"><div class="progress-fill" id="daysProgress" style="width:100%;background:linear-gradient(90deg,#10b981,#059669)"></div></div><div class="s-sub" id="subExpires">&#8212;</div></div>
+      <div class="stat-card"><div class="s-label">Conversations</div><div class="s-value" id="statsConvs">&#8212;</div><div class="s-sub">All time</div></div>
+    </div>
+    <div class="glass">
+      <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1.25rem;">&#128200; Usage Overview</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="glass-dark"><div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Message Balance</div><div style="display:flex;align-items:baseline;gap:.3rem;"><span style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:#a5b4fc;" id="balanceBig">&#8212;</span><span style="font-size:.8rem;color:#475569;">/ 1000</span></div></div>
+        <div class="glass-dark"><div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">Subscription Ends</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#6ee7b7;" id="subEndBig">&#8212;</div></div>
       </div>
+      <div style="margin-top:1.25rem;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;"><span style="font-size:.85rem;color:#94a3b8;">Message Usage</span><span style="font-size:.85rem;color:#a5b4fc;" id="usagePercent">0%</span></div><div class="progress-track" style="height:10px;"><div class="progress-fill" id="usageBar" style="width:0%"></div></div></div>
+    </div>
+  </div>
 
-      <!-- TAB: DEPLOY -->
-      <div class="tab-content" id="tab-deploy">
-        <div class="glass">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">&#128279; Deploy Your Bot</h2>
-          <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Share your unique chat link anywhere &#8212; Instagram bio, website, WhatsApp, email signatures.</p>
-          <div style="margin-bottom:1.5rem;"><label class="form-label" data-i18n="copy_link">Your Chat Link</label><div class="link-box"><span class="link-url" id="chatLinkUrl">Loading...</span><button class="btn-outline" onclick="copyLink()" id="copyLinkBtn" data-i18n="copy_link">Copy My Link</button></div></div>
-          <div style="margin-bottom:1.5rem;"><label class="form-label">Embed Code</label><div class="link-box" style="flex-direction:column;align-items:flex-start;gap:.75rem;"><code id="embedCode" style="font-size:.75rem;color:#94a3b8;word-break:break-all;line-height:1.6;background:rgba(0,0,0,.3);padding:.75rem;border-radius:8px;width:100%;"></code><button class="btn-outline" onclick="copyEmbed()" style="font-size:.8rem;padding:.5rem 1rem;">Copy Embed Code</button></div></div>
-          <div class="alert alert-info">&#128161; <strong>&#1606;&#1589;&#1610;&#1581;&#1577;:</strong> &#1586;&#1610;&#1583; &#1575;&#1604;&#1585;&#1575;&#1576;&#1591; &#1601;&#1610; &#1576;&#1610;&#1608; &#1575;&#1604;&#1575;&#1606;&#1587;&#1578;&#1594;&#1585;&#1575;&#1605; &#1583;&#1610;&#1575;&#1604;&#1603;&#1548; &#1571;&#1608; &#1601;&#1610; &#1585;&#1587;&#1575;&#1604;&#1577; &#1575;&#1604;&#1585;&#1583; &#1575;&#1604;&#1578;&#1604;&#1602;&#1575;&#1574;&#1610; &#1601;&#1610; &#1608;&#1575;&#1578;&#1587;&#1575;&#1576; &#1576;&#1610;&#1586;&#1606;&#1587;.</div>
-        </div>
+  <!-- ═══ TAB: DEPLOY ════════════════════════════════ -->
+  <div class="tab-content" id="tab-deploy">
+    <div class="glass">
+      <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">&#128279; Deploy Your Bot</h2>
+      <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Share your unique chat link anywhere &#8212; Instagram, website, WhatsApp.</p>
+      <div style="margin-bottom:1.5rem;"><label class="form-label" data-i18n="copy_link">Your Chat Link</label><div class="link-box"><span class="link-url" id="chatLinkUrl">Loading...</span><button class="btn-outline" onclick="copyLink()" id="copyLinkBtn" data-i18n="copy_link">Copy My Link</button></div></div>
+      <div style="margin-bottom:1.5rem;"><label class="form-label">Embed Code</label><div class="link-box" style="flex-direction:column;align-items:flex-start;gap:.75rem;"><code id="embedCode" style="font-size:.75rem;color:#94a3b8;word-break:break-all;line-height:1.6;background:rgba(0,0,0,.3);padding:.75rem;border-radius:8px;width:100%;"></code><button class="btn-outline" onclick="copyEmbed()" style="font-size:.8rem;padding:.5rem 1rem;">Copy Embed</button></div></div>
+      <div class="alert alert-info">&#128161; <strong>Tip:</strong> Add to Instagram bio, WhatsApp Business auto-reply, or website button.</div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: BILLING ═══════════════════════════════ -->
+  <div class="tab-content" id="tab-billing">
+    <div class="glass" style="margin-bottom:1.5rem;">
+      <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">&#128179; <span data-i18n="tab_billing">Billing</span></h2>
+      <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Redeem an activation code to top up your message balance.</p>
+      <div style="display:flex;gap:.75rem;max-width:480px;"><input class="form-input" type="text" id="activationCode" data-i18n-placeholder="redeem_placeholder" placeholder="Enter activation code" style="text-transform:uppercase;"/><button class="btn-success" onclick="redeemCode()" id="redeemBtn" data-i18n="redeem_code" style="white-space:nowrap;">Redeem Code</button></div>
+      <div id="redeemMsg" style="margin-top:.75rem;"></div>
+    </div>
+    <div class="glass">
+      <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1rem;">Current Balance</h3>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="billingBalance">&#8212;</div><div style="font-size:.8rem;color:#475569;" data-i18n="msgs_left">messages left</div></div>
+        <div style="flex:1;min-width:200px;"><div class="progress-track" style="height:12px;"><div class="progress-fill" id="billingProgress"></div></div><div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.75rem;color:#475569;"><span>0</span><span>1,000</span></div></div>
       </div>
+    </div>
+  </div>
 
-      <!-- TAB: BILLING -->
-      <div class="tab-content" id="tab-billing">
-        <div class="glass" style="margin-bottom:1.5rem;">
-          <h2 style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">&#128179; <span data-i18n="tab_billing">Billing</span></h2>
-          <p style="font-size:.875rem;color:#64748b;margin-bottom:1.75rem;">Redeem an activation code to top up your message balance by 1,000 messages.</p>
-          <div style="display:flex;gap:.75rem;max-width:480px;"><input class="form-input" type="text" id="activationCode" data-i18n-placeholder="redeem_placeholder" placeholder="Enter activation code" style="text-transform:uppercase;"/><button class="btn-success" onclick="redeemCode()" id="redeemBtn" data-i18n="redeem_code" style="white-space:nowrap;">Redeem Code</button></div>
-          <div id="redeemMsg" style="margin-top:.75rem;"></div>
-        </div>
-        <div class="glass">
-          <h3 style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:1rem;">Current Balance</h3>
-          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-            <div style="text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="billingBalance">&#8212;</div><div style="font-size:.8rem;color:#475569;" data-i18n="msgs_left">messages left</div></div>
-            <div style="flex:1;min-width:200px;"><div class="progress-track" style="height:12px;"><div class="progress-fill" id="billingProgress"></div></div><div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.75rem;color:#475569;"><span>0</span><span>1,000</span></div></div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /content -->
-  </main>
+  </div><!-- /content -->
+</main>
 </div><!-- /app -->
 
 <script>
+// ══════════════════════════════════════════════════════════════
+//  B-CHAT DASHBOARD v3 — Profit Engine + AI Advisor
+// ══════════════════════════════════════════════════════════════
 const sb = createSupabase();
 let profile       = null;
 let userId        = null;
@@ -337,36 +733,91 @@ let selectedColor = '#6366f1';
 let pendingLogoFile = null;
 let shippingCounter = 0;
 let productCounter  = 0;
+let profitChartInst = null;
+let calcState       = {};   // current profit calculator values
+let advisorHistory  = [];   // [{role,content}]
+let advisorBusy     = false;
 
-const TAB_TITLES = { customize:'tab_custom', brain:'tab_brain', analytics:'tab_analytics', deploy:'tab_deploy', billing:'tab_billing' };
+const CURRENCY_SYMBOLS = { MAD:'DH', USD:'$', EUR:'\u20AC', GBP:'\u00A3', SAR:'\u0631\u0633' };
+const TAB_TITLES = {
+  customize:'tab_custom', brain:'tab_brain', analytics:'tab_analytics',
+  deploy:'tab_deploy', billing:'tab_billing',
+  profit:'tab_profit', advisor:'tab_advisor'
+};
 
 // ── INIT ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   const lang = getLang();
   document.getElementById('langSelect').value = lang;
-  applyLang(lang);
-  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
-  document.getElementById('langSelect').addEventListener('change', function(){
-    setLang(this.value); applyLang(this.value);
-    document.documentElement.dir = (this.value === 'ar') ? 'rtl' : 'ltr';
-  });
+  applyLang(lang); applyDashboardLang(lang);
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
   const { data:{ session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'index.html'; return; }
   userId = session.user.id;
+
   await loadProfile();
   populateForms();
   loadAnalytics();
   setupDeployTab();
+
   const sd = profile?.structured_data || {};
   if (!sd.products?.length && !profile?.products_info) {
-    setTimeout(() => showToast('\u{1F4A1} \u0627\u0628\u062F\u0623 \u0628\u062A\u0639\u0628\u0626\u0629 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0631\u0648\u0628\u0648\u062A \u0641\u064A \u062A\u0627\u0628 "Brain"!'), 1200);
+    setTimeout(() => showToast('\u{1F4A1} ' + td('advisor_start')), 1400);
   }
 });
+
+// ── LANG ──────────────────────────────────────────────────────
+function handleLangChange(lang) {
+  setLang(lang); applyLang(lang); applyDashboardLang(lang);
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+}
+
+function applyDashboardLang(lang) {
+  // New tab labels
+  const el = (id) => document.getElementById(id);
+  if (el('nav-profit-label'))  el('nav-profit-label').textContent  = td('tab_profit');
+  if (el('nav-advisor-label')) el('nav-advisor-label').textContent = td('tab_advisor');
+  if (el('profit-title'))  el('profit-title').textContent  = td('profit_title');
+  if (el('profit-sub'))    el('profit-sub').textContent    = td('profit_sub');
+  if (el('advisor-title')) el('advisor-title').textContent = td('advisor_title');
+  if (el('advisor-sub'))   el('advisor-sub').textContent   = td('advisor_sub');
+  // Calc labels
+  const setTd = (id, key) => { const e=el(id); if(e) e.textContent = td(key); };
+  setTd('lbl-product-cost',  'product_cost');
+  setTd('lbl-shipping-cost', 'shipping_cost');
+  setTd('lbl-ad-spend',      'ad_spend');
+  setTd('lbl-target-margin', 'target_margin');
+  setTd('lbl-min-price',     'result_min_price');
+  setTd('lbl-rec-price',     'result_rec_price');
+  setTd('lbl-net-profit',    'result_net_profit');
+  setTd('lbl-breakeven',     'result_breakeven');
+  setTd('save-fin-label',    'save_fin');
+  setTd('chart-title',       'chart_title');
+  setTd('chart-profit-legend','chart_profit');
+  // Advisor chips
+  const chips = ['advisor_tip1','advisor_tip2','advisor_tip3'];
+  chips.forEach((key,i) => { const e=el(`chip${i}`); if(e) e.textContent = td(key); });
+  const chipAuto = el('chip-auto');
+  if (chipAuto) chipAuto.innerHTML = td('advisor_auto');
+  // Welcome message
+  const welcome = el('advisorWelcome');
+  if (welcome && advisorHistory.length === 0) welcome.textContent = td('advisor_start');
+  // Input placeholder
+  const ainput = el('advisorInput');
+  if (ainput) ainput.placeholder = td('advisor_placeholder');
+  // Advisor send btn title
+  const sendBtn = el('advisorSendBtn');
+  if (sendBtn) sendBtn.title = td('advisor_send');
+  // Currency
+  updateCurrencyPrefix();
+  if (profitChartInst) rebuildChart();
+}
 
 // ── LOAD PROFILE ──────────────────────────────────────────────
 async function loadProfile() {
   const { data, error } = await sb.from('profiles').select('*').eq('id', userId).single();
-  if (error || !data) { showToast('\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.', true); return; }
+  if (error || !data) { showToast('\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641.', true); return; }
   profile = data;
 }
 
@@ -379,28 +830,41 @@ function populateForms() {
   if (profile.logo_url) {
     document.getElementById('logoPreviewImg').src = profile.logo_url;
     document.getElementById('logoPreviewWrap').style.display = 'block';
-    document.getElementById('sidebarAvatar').innerHTML = `<img src="${profile.logo_url}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+    document.getElementById('sidebarAvatar').innerHTML =
+      `<img src="${profile.logo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
   }
   selectedColor = profile.theme_color || '#6366f1';
   document.getElementById('customColorPicker').value = selectedColor;
-  document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.toggle('selected', sw.dataset.color === selectedColor));
+  document.querySelectorAll('.color-swatch').forEach(sw =>
+    sw.classList.toggle('selected', sw.dataset.color === selectedColor));
   document.getElementById('sidebarName').textContent = profile.store_name || 'My Store';
 
-  // ── Brain structured data ──
+  // Brain
   const sd = profile.structured_data || {};
   const bd = sd.business_details || {};
   document.getElementById('businessType').value = bd.business_type || '';
   document.getElementById('mainCity').value      = bd.main_city     || '';
   document.getElementById('toneOfVoice').value   = bd.tone_of_voice || 'friendly';
   document.getElementById('customPrompt').value  = profile.custom_prompt || '';
+  (sd.shipping_zones?.length ? sd.shipping_zones : [{}]).forEach(z => addShippingRow(z.city, z.price));
+  (sd.products?.length       ? sd.products       : [{}]).forEach(p => addProductRow(p.name, p.price, p.description));
 
-  const zones = sd.shipping_zones || [];
-  if (zones.length) { zones.forEach(z => addShippingRow(z.city, z.price)); }
-  else              { addShippingRow(); }
+  // Profit calc — restore saved state
+  const fd = profile.financial_data || {};
+  if (fd.product_cost  !== undefined) document.getElementById('productCost').value      = fd.product_cost;
+  if (fd.shipping_cost !== undefined) document.getElementById('shippingCostCalc').value  = fd.shipping_cost;
+  if (fd.ad_spend      !== undefined) document.getElementById('adSpend').value           = fd.ad_spend;
+  if (fd.target_margin !== undefined) {
+    document.getElementById('targetMargin').value = fd.target_margin;
+    document.getElementById('marginDisplay').textContent = fd.target_margin + '%';
+  }
+  if (fd.currency) document.getElementById('calcCurrency').value = fd.currency;
+  updateCurrencyPrefix();
 
-  const prods = sd.products || [];
-  if (prods.length) { prods.forEach(p => addProductRow(p.name, p.price, p.description)); }
-  else              { addProductRow(); }
+  // Advisor context
+  updateAdvisorContext();
+
+  if (fd.product_cost) recalculate();
 }
 
 // ── SHOW TAB ──────────────────────────────────────────────────
@@ -409,11 +873,17 @@ function showTab(name) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.getElementById(`nav-${name}`).classList.add('active');
-  document.getElementById('tabTitle').setAttribute('data-i18n', TAB_TITLES[name]);
-  document.getElementById('tabTitle').textContent = t(TAB_TITLES[name]);
+  const titleEl = document.getElementById('tabTitle');
+  if (TAB_TITLES[name] === 'tab_profit' || TAB_TITLES[name] === 'tab_advisor') {
+    titleEl.textContent = td(TAB_TITLES[name]);
+  } else {
+    titleEl.setAttribute('data-i18n', TAB_TITLES[name] || '');
+    titleEl.textContent = t(TAB_TITLES[name] || name);
+  }
   if (name === 'analytics') loadAnalytics();
   if (name === 'deploy')    setupDeployTab();
   if (name === 'billing')   updateBillingDisplay();
+  if (name === 'advisor')   updateAdvisorContext();
 }
 
 // ── COLOR ─────────────────────────────────────────────────────
@@ -428,7 +898,7 @@ function selectColor(color, el) {
 function handleLogoChange(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { showToast('\u0627\u0644\u0645\u0644\u0641 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB.', true); return; }
+  if (file.size > 2097152) { showToast('Max 2MB', true); return; }
   pendingLogoFile = file;
   const reader = new FileReader();
   reader.onload = e => {
@@ -447,82 +917,56 @@ async function saveCustomize() {
     const ext  = pendingLogoFile.name.split('.').pop();
     const path = `${userId}/logo.${ext}`;
     const { error: upErr } = await sb.storage.from('logos').upload(path, pendingLogoFile, { upsert:true });
-    if (!upErr) {
-      const { data: urlData } = sb.storage.from('logos').getPublicUrl(path);
-      logoUrl = urlData.publicUrl;
-    }
+    if (!upErr) { const { data: urlData } = sb.storage.from('logos').getPublicUrl(path); logoUrl = urlData.publicUrl; }
   }
   const updates = {
     store_name: document.getElementById('storeName').value.trim(),
     bot_name:   document.getElementById('botName').value.trim(),
     bio:        document.getElementById('storeBio').value.trim(),
-    theme_color: selectedColor,
-    logo_url:   logoUrl,
+    theme_color: selectedColor, logo_url: logoUrl,
   };
   const { error } = await sb.from('profiles').update(updates).eq('id', userId);
   btn.textContent = t('save'); btn.disabled = false;
-  if (error) { showToast('\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.', true); return; }
+  if (error) { showToast(t('save') + ' failed', true); return; }
   profile = { ...profile, ...updates };
   document.getElementById('sidebarName').textContent = updates.store_name;
-  showToast(t('saved'));
-  pendingLogoFile = null;
+  showToast(t('saved')); pendingLogoFile = null;
 }
 
-// ── SHIPPING REPEATER ─────────────────────────────────────────
-function addShippingRow(city = '', price = '') {
+// ── REPEATERS ─────────────────────────────────────────────────
+function addShippingRow(city='', price='') {
   shippingCounter++;
-  const id  = `ship_${shippingCounter}`;
+  const id = `ship_${shippingCounter}`;
   const row = document.createElement('div');
-  row.className = 'repeater-row';
-  row.id = id;
-  row.innerHTML = `
-    <div class="row-grid-ship">
-      <div>
-        <label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0645\u062F\u064A\u0646\u0629</label>
-        <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0637\u0646\u062C\u0629" value="${escAttr(city)}" data-field="city"/>
-      </div>
-      <div>
-        <label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0633\u0639\u0631 (\u062F\u0631\u0647\u0645)</label>
-        <input class="form-input" type="number" placeholder="30" min="0" value="${escAttr(price)}" data-field="price"/>
-      </div>
-      <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
-        <button class="btn-remove" onclick="removeRow('${id}')" title="\u062D\u0630\u0641">&times;</button>
-      </div>
-    </div>`;
+  row.className = 'repeater-row'; row.id = id;
+  row.innerHTML = `<div class="row-grid-ship">
+    <div><label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0645\u062F\u064A\u0646\u0629</label>
+    <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0637\u0646\u062C\u0629" value="${escAttr(city)}" data-field="city"/></div>
+    <div><label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0633\u0639\u0631</label>
+    <input class="form-input" type="number" placeholder="30" min="0" value="${escAttr(price)}" data-field="price"/></div>
+    <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+    <button class="btn-remove" onclick="removeRow('${id}')">&times;</button></div></div>`;
   document.getElementById('shippingList').appendChild(row);
 }
-
-// ── PRODUCT REPEATER ──────────────────────────────────────────
-function addProductRow(name = '', price = '', description = '') {
+function addProductRow(name='', price='', description='') {
   productCounter++;
-  const id  = `prod_${productCounter}`;
+  const id = `prod_${productCounter}`;
   const row = document.createElement('div');
-  row.className = 'repeater-row';
-  row.id = id;
-  row.innerHTML = `
-    <div class="row-grid-prod">
-      <div>
-        <label class="form-label" style="font-size:.7rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C</label>
-        <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0631\u0648\u0628 \u062D\u0645\u0631\u0627\u0621" value="${escAttr(name)}" data-field="name"/>
-      </div>
-      <div>
-        <label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0633\u0639\u0631 (\u062F\u0631\u0647\u0645)</label>
-        <input class="form-input" type="number" placeholder="299" min="0" value="${escAttr(price)}" data-field="price"/>
-      </div>
-      <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
-        <button class="btn-remove" onclick="removeRow('${id}')" title="\u062D\u0630\u0641">&times;</button>
-      </div>
-    </div>
-    <div>
-      <label class="form-label" style="font-size:.7rem;">\u0648\u0635\u0641 \u0645\u062E\u062A\u0635\u0631 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
-      <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0645\u062A\u0648\u0641\u0631 \u0641\u064A S/M/L\u060C \u0623\u0644\u0648\u0627\u0646 \u0645\u062A\u0639\u062F\u062F\u0629" value="${escAttr(description)}" data-field="description"/>
-    </div>`;
+  row.className = 'repeater-row'; row.id = id;
+  row.innerHTML = `<div class="row-grid-prod">
+    <div><label class="form-label" style="font-size:.7rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C</label>
+    <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: \u0631\u0648\u0628" value="${escAttr(name)}" data-field="name"/></div>
+    <div><label class="form-label" style="font-size:.7rem;">\u0627\u0644\u0633\u0639\u0631 (DH)</label>
+    <input class="form-input" type="number" placeholder="299" min="0" value="${escAttr(price)}" data-field="price"/></div>
+    <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+    <button class="btn-remove" onclick="removeRow('${id}')">&times;</button></div></div>
+    <div style="margin-top:.5rem;"><label class="form-label" style="font-size:.7rem;">\u0648\u0635\u0641 \u0645\u062E\u062A\u0635\u0631</label>
+    <input class="form-input" type="text" placeholder="\u0645\u062B\u0627\u0644: S/M/L" value="${escAttr(description)}" data-field="description"/></div>`;
   document.getElementById('productList').appendChild(row);
 }
+function removeRow(id) { document.getElementById(id)?.remove(); }
 
-function removeRow(id) { const el = document.getElementById(id); if (el) el.remove(); }
-
-// ── BUILD JSON ────────────────────────────────────────────────
+// ── BUILD STRUCTURED DATA ─────────────────────────────────────
 function buildStructuredData() {
   const business_details = {
     business_type: document.getElementById('businessType').value.trim(),
@@ -531,16 +975,16 @@ function buildStructuredData() {
   };
   const shipping_zones = [];
   document.querySelectorAll('#shippingList .repeater-row').forEach(row => {
-    const city  = row.querySelector('[data-field="city"]')?.value.trim()  || '';
+    const city  = row.querySelector('[data-field="city"]')?.value.trim() || '';
     const price = row.querySelector('[data-field="price"]')?.value.trim() || '0';
-    if (city) shipping_zones.push({ city, price: Number(price) || 0 });
+    if (city) shipping_zones.push({ city, price: Number(price)||0 });
   });
   const products = [];
   document.querySelectorAll('#productList .repeater-row').forEach(row => {
     const name        = row.querySelector('[data-field="name"]')?.value.trim()        || '';
     const price       = row.querySelector('[data-field="price"]')?.value.trim()       || '0';
     const description = row.querySelector('[data-field="description"]')?.value.trim() || '';
-    if (name) products.push({ name, price: Number(price) || 0, description });
+    if (name) products.push({ name, price: Number(price)||0, description });
   });
   return { business_details, shipping_zones, products };
 }
@@ -549,37 +993,346 @@ function buildStructuredData() {
 async function saveBrain() {
   const btn = document.getElementById('saveBrainBtn');
   btn.textContent = '...'; btn.disabled = true;
-
   const structured_data = buildStructuredData();
-
   if (!structured_data.products.length) {
-    showToast('\u0623\u0636\u0641 \u0645\u0646\u062A\u062C\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0642\u0628\u0644 \u0627\u0644\u062D\u0641\u0638.', true);
-    btn.textContent = t('save'); btn.disabled = false;
+    showToast('\u0623\u0636\u0641 \u0645\u0646\u062A\u062C\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644.', true);
+    btn.textContent = t('save'); btn.disabled = false; return;
+  }
+  const { error } = await sb.from('profiles').update({
+    structured_data, custom_prompt: document.getElementById('customPrompt').value.trim()
+  }).eq('id', userId);
+  btn.textContent = t('save'); btn.disabled = false;
+  if (error) { showToast('\u0641\u0634\u0644: ' + error.message, true); return; }
+  profile = { ...profile, structured_data };
+  const pv = document.getElementById('jsonPreview');
+  if (pv.classList.contains('visible')) pv.textContent = JSON.stringify(structured_data, null, 2);
+  updateAdvisorContext();
+  showToast('\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0630\u0627\u0643\u0631\u0629!');
+}
+function toggleJsonPreview() {
+  const el = document.getElementById('jsonPreview');
+  if (el.classList.toggle('visible')) el.textContent = JSON.stringify(buildStructuredData(), null, 2);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PROFIT ENGINE
+// ══════════════════════════════════════════════════════════════
+function updateCurrencyPrefix() {
+  const cur = document.getElementById('calcCurrency')?.value || 'MAD';
+  const sym = CURRENCY_SYMBOLS[cur] || cur;
+  ['currency-prefix','currency-prefix2','currency-prefix3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = sym;
+  });
+}
+
+function recalculate() {
+  const productCost  = parseFloat(document.getElementById('productCost').value)       || 0;
+  const shippingCost = parseFloat(document.getElementById('shippingCostCalc').value)   || 0;
+  const adSpend      = parseFloat(document.getElementById('adSpend').value)            || 0;
+  const margin       = parseFloat(document.getElementById('targetMargin').value)       || 40;
+  const currency     = document.getElementById('calcCurrency').value                  || 'MAD';
+  const sym          = CURRENCY_SYMBOLS[currency] || currency;
+
+  const totalCost    = productCost + shippingCost + adSpend;
+  if (totalCost === 0) {
+    document.getElementById('resultsArea').style.display   = 'none';
+    document.getElementById('profitHealthWrap').style.display = 'none';
+    document.getElementById('chartWrap').style.display    = 'none';
+    document.getElementById('calcEmptyState').style.display = 'block';
     return;
   }
 
-  const updates = {
-    structured_data,
-    custom_prompt: document.getElementById('customPrompt').value.trim(),
+  const minPrice = totalCost;
+  const recPrice = totalCost / (1 - margin / 100);
+  const netProfit = recPrice - totalCost;
+  const roi      = totalCost > 0 ? (netProfit / totalCost * 100) : 0;
+  const breakeven = netProfit > 0 ? Math.ceil(totalCost * 10 / netProfit) : 999;
+
+  calcState = { productCost, shippingCost, adSpend, margin, currency, sym,
+                totalCost, minPrice, recPrice, netProfit, roi, breakeven };
+
+  // Show results
+  document.getElementById('resultsArea').style.display   = 'grid';
+  document.getElementById('profitHealthWrap').style.display = 'flex';
+  document.getElementById('chartWrap').style.display    = 'block';
+  document.getElementById('calcEmptyState').style.display = 'none';
+
+  const fmt = (n) => sym + ' ' + n.toFixed(0);
+
+  document.getElementById('res-min-price').textContent  = fmt(minPrice);
+  document.getElementById('res-rec-price').textContent  = fmt(recPrice);
+  document.getElementById('res-net-profit').textContent = fmt(netProfit);
+  document.getElementById('res-roi-line').textContent   = 'ROI: ' + roi.toFixed(0) + '%';
+  document.getElementById('res-margin-badge').textContent = margin + '% ' + td('result_roi');
+  document.getElementById('res-breakeven').textContent  = breakeven + ' units';
+
+  // Health badge
+  const badge   = document.getElementById('profitHealthBadge');
+  const healthMsg = document.getElementById('profitHealthMsg');
+  if (margin >= 40) {
+    badge.className = 'profit-badge good'; badge.textContent = '\uD83D\uDFE2 Healthy Margin';
+    healthMsg.textContent = 'Great! Your margin is optimal for e-commerce.';
+  } else if (margin >= 20) {
+    badge.className = 'profit-badge ok'; badge.textContent = '\uD83D\uDFE1 Moderate Margin';
+    healthMsg.textContent = 'Decent. Consider reducing costs or increasing price.';
+  } else {
+    badge.className = 'profit-badge bad'; badge.textContent = '\uD83D\uDD34 Low Margin';
+    healthMsg.textContent = 'Warning: Low margin. Risk of loss after returns/refunds.';
+  }
+
+  // Build chart data
+  rebuildChart();
+  updateAdvisorContext();
+}
+
+function rebuildChart() {
+  const { totalCost, sym } = calcState;
+  if (!totalCost) return;
+
+  // Generate price points: from minPrice*0.8 to minPrice*2.8
+  const pricePoints = Array.from({length:20}, (_, i) => totalCost * (0.85 + i * 0.1));
+  const profitPoints = pricePoints.map(p => p - totalCost);
+  const bgColors     = profitPoints.map(p => p > 0 ? 'rgba(99,102,241,.7)' : 'rgba(239,68,68,.6)');
+  const borderColors = profitPoints.map(p => p > 0 ? '#6366f1' : '#ef4444');
+
+  const ctx = document.getElementById('profitChart').getContext('2d');
+  if (profitChartInst) { profitChartInst.destroy(); profitChartInst = null; }
+
+  profitChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: pricePoints.map(p => sym + ' ' + p.toFixed(0)),
+      datasets: [{
+        label: td('chart_profit'),
+        data: profitPoints,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15,23,42,.95)',
+          titleColor: '#a5b4fc', bodyColor: '#e2e8f0',
+          padding: 10, cornerRadius: 10,
+          callbacks: {
+            title: (items) => td('chart_price') + ': ' + items[0].label,
+            label: (item) => td('chart_profit') + ': ' + sym + ' ' + item.raw.toFixed(0),
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#475569', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#475569', callback: (v) => sym + ' ' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,.06)' } }
+      }
+    }
+  });
+}
+
+function resetCalc() {
+  ['productCost','shippingCostCalc','adSpend'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('targetMargin').value = 40;
+  document.getElementById('marginDisplay').textContent = '40%';
+  calcState = {};
+  document.getElementById('resultsArea').style.display   = 'none';
+  document.getElementById('profitHealthWrap').style.display = 'none';
+  document.getElementById('chartWrap').style.display    = 'none';
+  document.getElementById('calcEmptyState').style.display = 'block';
+  if (profitChartInst) { profitChartInst.destroy(); profitChartInst = null; }
+  updateAdvisorContext();
+}
+
+async function saveFinancialData() {
+  const btn = document.getElementById('saveFinBtn');
+  btn.disabled = true;
+  const financial_data = {
+    product_cost:  parseFloat(document.getElementById('productCost').value)       || 0,
+    shipping_cost: parseFloat(document.getElementById('shippingCostCalc').value)   || 0,
+    ad_spend:      parseFloat(document.getElementById('adSpend').value)            || 0,
+    target_margin: parseFloat(document.getElementById('targetMargin').value)       || 40,
+    currency:      document.getElementById('calcCurrency').value || 'MAD',
+    saved_at:      new Date().toISOString(),
   };
-
-  const { error } = await sb.from('profiles').update(updates).eq('id', userId);
-  btn.textContent = t('save'); btn.disabled = false;
-
-  if (error) { showToast('\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0630\u0627\u0643\u0631\u0629: ' + error.message, true); return; }
-
-  profile = { ...profile, ...updates };
-  const preview = document.getElementById('jsonPreview');
-  if (preview.classList.contains('visible')) { preview.textContent = JSON.stringify(structured_data, null, 2); }
-  showToast('\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0628\u0646\u062C\u0627\u062D!');
+  const { error } = await sb.from('profiles').update({ financial_data }).eq('id', userId);
+  btn.disabled = false;
+  if (error) { showToast('Save failed: ' + error.message, true); return; }
+  profile = { ...profile, financial_data };
+  showToast('\u2705 ' + td('fin_saved'));
 }
 
-function toggleJsonPreview() {
-  const el = document.getElementById('jsonPreview');
-  if (el.classList.toggle('visible')) { el.textContent = JSON.stringify(buildStructuredData(), null, 2); }
+// ══════════════════════════════════════════════════════════════
+//  AI GROWTH ADVISOR
+// ══════════════════════════════════════════════════════════════
+function updateAdvisorContext() {
+  const sym = calcState.sym || 'DH';
+  const set = (id, val) => { const e=document.getElementById(id); if(e) e.textContent = val; };
+  set('ctx-total-cost', calcState.totalCost ? sym+' '+calcState.totalCost.toFixed(0) : '\u2014');
+  set('ctx-rec-price',  calcState.recPrice  ? sym+' '+calcState.recPrice.toFixed(0)  : '\u2014');
+  set('ctx-net-profit', calcState.netProfit !== undefined ? sym+' '+calcState.netProfit.toFixed(0) : '\u2014');
+  set('ctx-roi',        calcState.roi !== undefined ? calcState.roi.toFixed(0)+'%' : '\u2014');
+  set('ctx-margin',     calcState.margin ? calcState.margin+'%' : '\u2014');
+  const sd = profile?.structured_data || {};
+  set('ctx-store',    profile?.store_name || '\u2014');
+  set('ctx-type',     sd.business_details?.business_type || '\u2014');
+  set('ctx-products', (sd.products?.length || 0) + ' products');
+  set('ctx-city',     sd.business_details?.main_city || '\u2014');
 }
 
-// ── ANALYTICS ─────────────────────────────────────────────────
+function buildAdvisorSystemPrompt() {
+  const lang = getLang();
+  const langInstruction = lang === 'ar'
+    ? 'Reply in Moroccan Darija (Arabic). Be concise and actionable.'
+    : lang === 'fr'
+    ? 'Réponds en français. Sois concis et actionnable.'
+    : 'Reply in English. Be concise and actionable.';
+
+  const sd = profile?.structured_data || {};
+  const products = sd.products || [];
+  const shipping = sd.shipping_zones || [];
+
+  let prompt = `You are an expert E-commerce Business Consultant and Financial Advisor specializing in the Moroccan and MENA market.
+
+${langInstruction}
+
+Your merchant's store: "${profile?.store_name || 'Unknown'}"
+Business type: ${sd.business_details?.business_type || 'E-commerce'}
+City: ${sd.business_details?.main_city || 'Morocco'}
+Tone: ${sd.business_details?.tone_of_voice || 'friendly'}
+
+`;
+
+  if (calcState.totalCost) {
+    prompt += `FINANCIAL DATA:
+- Total cost per sale: ${calcState.sym} ${calcState.totalCost?.toFixed(0)}
+  (Product: ${calcState.sym} ${calcState.productCost}, Shipping: ${calcState.sym} ${calcState.shippingCost}, Ads: ${calcState.sym} ${calcState.adSpend})
+- Recommended selling price: ${calcState.sym} ${calcState.recPrice?.toFixed(0)}
+- Net profit per sale: ${calcState.sym} ${calcState.netProfit?.toFixed(0)}
+- ROI: ${calcState.roi?.toFixed(0)}%
+- Target margin: ${calcState.margin}%
+- Currency: ${calcState.currency}
+
+`;
+  } else {
+    prompt += `(No financial data entered yet — advise based on store info only)\n\n`;
+  }
+
+  if (products.length) {
+    prompt += `PRODUCTS:\n` + products.map(p => `- ${p.name}: ${p.price} ${calcState.sym || 'DH'}${p.description ? ' ('+p.description+')' : ''}`).join('\n') + '\n\n';
+  }
+
+  if (shipping.length) {
+    prompt += `SHIPPING ZONES:\n` + shipping.map(z => `- ${z.city}: ${z.price} ${calcState.sym || 'DH'}`).join('\n') + '\n\n';
+  }
+
+  prompt += `RULES:
+- Always give 3 specific, numbered, actionable tips
+- Use real numbers from the data above
+- Never say you're an AI or mention Groq
+- Keep each tip under 3 sentences
+- Focus on practical steps the merchant can take TODAY`;
+
+  return prompt;
+}
+
+async function sendAdvisorMessage(text) {
+  const input = document.getElementById('advisorInput');
+  const msg   = text || input.value.trim();
+  if (!msg || advisorBusy) return;
+  if (!text) { input.value = ''; autoResizeAdvisor(input); }
+
+  appendAdvisorMsg('user', msg);
+  advisorHistory.push({ role: 'user', content: msg });
+
+  advisorBusy = true;
+  document.getElementById('advisorSendBtn').disabled = true;
+  const typing = appendAdvisorTyping();
+
+  const reply = await callAdvisorGroq();
+
+  typing.remove();
+  advisorBusy = false;
+  document.getElementById('advisorSendBtn').disabled = false;
+  appendAdvisorMsg('bot', reply);
+  advisorHistory.push({ role: 'assistant', content: reply });
+}
+
+async function sendAdvisorChip(index) {
+  const keys = ['advisor_tip1','advisor_tip2','advisor_tip3'];
+  await sendAdvisorMessage(td(keys[index]));
+}
+
+async function sendAdvisorAutoAnalyze() {
+  if (!calcState.totalCost && !profile?.structured_data?.products?.length) {
+    showToast(td('no_fin_data'), true); return;
+  }
+  const autoMsg = getLang() === 'ar'
+    ? '\u062D\u0644\u0644 \u062A\u062C\u0627\u0631\u062A\u064A \u0648\u0623\u0639\u0637\u0646\u064A 3 \u0646\u0635\u0627\u0626\u062D \u0639\u0645\u0644\u064A\u0629 \u0644\u0632\u064A\u0627\u062F\u0629 \u0627\u0644\u0623\u0631\u0628\u0627\u062D.'
+    : getLang() === 'fr'
+    ? 'Analyse mon business et donne-moi 3 conseils actionnables pour augmenter mes profits.'
+    : 'Analyze my entire business data and give me 3 specific, actionable tips to increase my ROI.';
+  await sendAdvisorMessage(autoMsg);
+}
+
+async function callAdvisorGroq() {
+  const sysPrompt = buildAdvisorSystemPrompt();
+  const messages  = [
+    { role: 'system', content: sysPrompt },
+    ...advisorHistory.slice(-16),
+  ];
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${BCHAT_CONFIG.GROQ_API_KEY}` },
+      body: JSON.stringify({ model: BCHAT_CONFIG.GROQ_MODEL, max_tokens: 700, temperature: 0.65, messages }),
+    });
+    if (!resp.ok) return getLang() === 'ar' ? '\u0639\u0630\u0631\u0627\u064B\u060C \u0635\u0627\u064A\u0631 \u062E\u0637\u0623. \u062C\u0631\u0628 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.' : 'Sorry, an error occurred. Please try again.';
+    const data = await resp.json();
+    const raw = data.choices?.[0]?.message?.content || '';
+    return raw.replace(/<think[\s\S]*?<\/think>/gi,'').replace(/<thinking[\s\S]*?<\/thinking>/gi,'').trim();
+  } catch {
+    return getLang() === 'ar' ? '\u0645\u0634\u0643\u0644 \u0641\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644.' : 'Connection error. Try again.';
+  }
+}
+
+function appendAdvisorMsg(role, text) {
+  const area = document.getElementById('advisorMessages');
+  const welcome = document.getElementById('advisorWelcome');
+  if (welcome && advisorHistory.length <= 1) welcome.style.display = 'none';
+  const el = document.createElement('div');
+  el.className = `adv-msg ${role}`;
+  el.innerHTML = text.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+  return el;
+}
+
+function appendAdvisorTyping() {
+  const area = document.getElementById('advisorMessages');
+  const el = document.createElement('div');
+  el.className = 'adv-typing';
+  el.innerHTML = '<div class="adv-dot"></div><div class="adv-dot"></div><div class="adv-dot"></div>';
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+  return el;
+}
+
+function autoResizeAdvisor(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function advisorKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAdvisorMessage(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ANALYTICS
+// ══════════════════════════════════════════════════════════════
 async function loadAnalytics() {
   if (!profile) await loadProfile();
   if (!profile) return;
@@ -598,8 +1351,8 @@ async function loadAnalytics() {
   document.getElementById('subEndBig').textContent     = subEnd.toLocaleDateString();
   document.getElementById('usagePercent').textContent  = Math.round(100 - pctMsg) + '% used';
   document.getElementById('usageBar').style.width      = (100 - pctMsg) + '%';
-  const { count } = await sb.from('conversations').select('*', { count:'exact', head:true }).eq('merchant_id', userId);
-  document.getElementById('statsConvs').textContent = (count || 0).toLocaleString();
+  const { count } = await sb.from('conversations').select('*',{count:'exact',head:true}).eq('merchant_id',userId);
+  document.getElementById('statsConvs').textContent = (count||0).toLocaleString();
 }
 
 // ── DEPLOY ────────────────────────────────────────────────────
@@ -612,8 +1365,7 @@ function setupDeployTab() {
 async function copyLink() {
   await navigator.clipboard.writeText(`${BCHAT_CONFIG.BASE_URL}/chat.html?id=${userId}`).catch(()=>{});
   const btn = document.getElementById('copyLinkBtn');
-  btn.textContent = t('copied');
-  setTimeout(() => btn.textContent = t('copy_link'), 2000);
+  btn.textContent = t('copied'); setTimeout(() => btn.textContent = t('copy_link'), 2000);
   showToast(t('copied'));
 }
 async function copyEmbed() {
@@ -627,19 +1379,19 @@ async function redeemCode() {
   if (!code) return;
   const btn = document.getElementById('redeemBtn');
   btn.textContent = '...'; btn.disabled = true;
-  const { data: codeRow, error: codeErr } = await sb.from('activation_codes').select('*').eq('code', code).eq('is_used', false).single();
+  const { data: codeRow, error: codeErr } = await sb.from('activation_codes').select('*').eq('code',code).eq('is_used',false).single();
   if (codeErr || !codeRow) {
-    showRedeemMsg('\u0643\u0648\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0645\u0633\u0628\u0642\u0627\u064B.', true);
+    showRedeemMsg('\u0643\u0648\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D.', true);
     btn.textContent = t('redeem_code'); btn.disabled = false; return;
   }
-  await sb.from('activation_codes').update({ is_used:true, used_by:userId, used_at:new Date().toISOString() }).eq('id', codeRow.id);
-  const newBalance = (profile.message_balance || 0) + codeRow.message_amount;
-  const { error: updateErr } = await sb.from('profiles').update({ message_balance: newBalance }).eq('id', userId);
+  await sb.from('activation_codes').update({is_used:true,used_by:userId,used_at:new Date().toISOString()}).eq('id',codeRow.id);
+  const newBalance = (profile.message_balance||0) + codeRow.message_amount;
+  const { error: updateErr } = await sb.from('profiles').update({message_balance:newBalance}).eq('id',userId);
   btn.textContent = t('redeem_code'); btn.disabled = false;
   if (updateErr) { showRedeemMsg('\u0641\u0634\u0644 \u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0643\u0648\u062F.', true); return; }
   profile.message_balance = newBalance;
   updateBillingDisplay();
-  showRedeemMsg(`\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 ${codeRow.message_amount.toLocaleString()} \u0631\u0633\u0627\u0644\u0629! \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062C\u062F\u064A\u062F: ${newBalance.toLocaleString()}`, false);
+  showRedeemMsg(`\u2705 +${codeRow.message_amount.toLocaleString()} \u0631\u0633\u0627\u0644\u0629! \u0627\u0644\u0631\u0635\u064A\u062F: ${newBalance.toLocaleString()}`, false);
   document.getElementById('activationCode').value = '';
   loadAnalytics();
 }
@@ -652,24 +1404,19 @@ function updateBillingDisplay() {
   if (!profile) return;
   const bal = profile.message_balance || 0;
   document.getElementById('billingBalance').textContent = bal.toLocaleString();
-  document.getElementById('billingProgress').style.width = Math.min(100,(bal/1000)*100) + '%';
+  document.getElementById('billingProgress').style.width = Math.min(100,(bal/1000)*100)+'%';
 }
 
-// ── LOGOUT ────────────────────────────────────────────────────
+// ── COMMON ────────────────────────────────────────────────────
 async function doLogout() { await sb.auth.signOut(); window.location.href = 'index.html'; }
-
-// ── TOAST ─────────────────────────────────────────────────────
-function showToast(msg, isError = false) {
+function showToast(msg, isError=false) {
   const el = document.createElement('div');
   el.className = `toast${isError ? ' error' : ''}`;
   el.textContent = msg;
   document.getElementById('toaster').appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
-
-// ── UTILS ─────────────────────────────────────────────────────
 function escAttr(str) { return (str||'').toString().replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-
 document.getElementById('nav-billing').addEventListener('click', updateBillingDisplay);
 </script>
 </body>
