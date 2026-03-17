@@ -321,6 +321,45 @@ h1,h2,h3,.display{font-family:'Syne',sans-serif}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#1e2035;border-radius:3px}
+
+  /* ── ORDERS TABLE ──────────────────────────────────── */
+  .orders-table-wrap { overflow-x:auto; }
+  .orders-table { width:100%; border-collapse:collapse; min-width:640px; font-size:.875rem; }
+  .orders-table thead tr { border-bottom:1px solid var(--border2); }
+  .orders-table thead th { padding:.75rem 1rem; text-align:left; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+  .orders-table tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+  .orders-table tbody tr:hover { background:var(--surface2); }
+  .orders-table tbody td { padding:.9rem 1rem; color:var(--text-sub); vertical-align:middle; }
+  .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .7rem; border-radius:999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+  .status-pending    { background:rgba(245,158,11,.12);  border:1px solid rgba(245,158,11,.3);  color:#fcd34d; }
+  .status-confirmed  { background:rgba(99,102,241,.12);  border:1px solid rgba(99,102,241,.3);  color:#a5b4fc; }
+  .status-shipped    { background:rgba(59,130,246,.12);  border:1px solid rgba(59,130,246,.3);  color:#93c5fd; }
+  .status-delivered  { background:rgba(16,185,129,.12);  border:1px solid rgba(16,185,129,.3);  color:#6ee7b7; }
+  .status-cancelled  { background:rgba(239,68,68,.12);   border:1px solid rgba(239,68,68,.3);   color:#f87171; }
+
+  /* ── ORDER DETAIL MODAL ─────────────────────────────── */
+  .modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.7); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; padding:1rem; }
+  .modal-overlay.active { display:flex; }
+  .modal-box { background:#0d1117; border:1px solid var(--border2); border-radius:20px; max-width:520px; width:100%; max-height:85vh; overflow-y:auto; box-shadow:0 30px 80px rgba(0,0,0,.6); animation:rowIn .25s ease both; }
+  .modal-hdr { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .modal-hdr h3 { font-size:1rem; font-weight:700; color:#f1f5f9; }
+  .modal-close { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:.25rem; transition:color .2s; }
+  .modal-close:hover { color:var(--text); }
+  .modal-body { padding:1.5rem; }
+
+  /* ── ANALYTICS ENHANCEMENTS ───────────────────────── */
+  .revenue-metric { text-align:center; padding:1.5rem; border-radius:16px; background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(168,85,247,.08)); border:1px solid rgba(99,102,241,.2); }
+  .revenue-metric .rm-label { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.4rem; }
+  .revenue-metric .rm-value { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .revenue-metric .rm-sub { font-size:.75rem; color:var(--text-muted); margin-top:.2rem; }
+
+  /* ── INVENTORY SYNC ─────────────────────────────────── */
+  .sync-status { display:flex; align-items:center; gap:.5rem; font-size:.82rem; padding:.6rem .9rem; border-radius:10px; margin-top:.75rem; }
+  .sync-status.loading { background:rgba(99,102,241,.08); color:#a5b4fc; }
+  .sync-status.success { background:rgba(16,185,129,.08); color:#6ee7b7; }
+  .sync-status.error   { background:rgba(239,68,68,.08);  color:#f87171; }
+  .spinner { width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -356,6 +395,14 @@ h1,h2,h3,.display{font-family:'Syne',sans-serif}
     </div>
     <div class="nav-item" onclick="showTab('billing')" id="nav-billing">
       <span class="icon">&#128179;</span><span class="label" data-i18n="tab_billing">Billing</span>
+    </div>
+    <div class="nav-separator"></div>
+    <span class="nav-label">Commerce</span>
+    <div class="nav-item" onclick="showTab('orders')" id="nav-orders">
+      <span class="icon">&#128722;</span><span class="label">Orders</span>
+    </div>
+    <div class="nav-item" onclick="showTab('settings')" id="nav-settings">
+      <span class="icon">&#9881;</span><span class="label">Settings</span>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -718,6 +765,146 @@ h1,h2,h3,.display{font-family:'Syne',sans-serif}
     </div>
   </div>
 
+
+  <!-- ═══ TAB: ORDERS ═══════════════════════════════════ -->
+  <div class="tab-content" id="tab-orders">
+
+    <!-- Revenue metrics -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;" id="ordersMetricsGrid">
+      <div class="revenue-metric">
+        <div class="rm-label">Total Revenue</div>
+        <div class="rm-value" id="metricRevenue">0 MAD</div>
+        <div class="rm-sub">All time</div>
+      </div>
+      <div class="revenue-metric" style="background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(5,150,105,.08));border-color:rgba(16,185,129,.2);">
+        <div class="rm-label" style="color:var(--text-muted);">Orders</div>
+        <div class="rm-value" style="color:#6ee7b7;" id="metricOrders">0</div>
+        <div class="rm-sub">Total placed</div>
+      </div>
+      <div class="revenue-metric" style="background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(217,119,6,.06));border-color:rgba(245,158,11,.2);">
+        <div class="rm-label" style="color:var(--text-muted);">Conversion Rate</div>
+        <div class="rm-value" style="color:#fcd34d;" id="metricConversion">0%</div>
+        <div class="rm-sub">Orders / Conversations</div>
+      </div>
+      <div class="revenue-metric" style="background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(37,99,235,.08));border-color:rgba(59,130,246,.2);">
+        <div class="rm-label" style="color:var(--text-muted);">Avg. Order Value</div>
+        <div class="rm-value" style="color:#93c5fd;" id="metricAOV">0 MAD</div>
+        <div class="rm-sub">Per order</div>
+      </div>
+    </div>
+
+    <!-- Revenue chart -->
+    <div class="glass" style="margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="section-title">&#128200; Revenue (Last 30 Days)</div>
+        <select id="chartPeriod" class="form-select" style="width:auto;padding:.35rem .8rem;font-size:.8rem;" onchange="renderRevenueChart()">
+          <option value="30">30 days</option>
+          <option value="7">7 days</option>
+          <option value="90">90 days</option>
+        </select>
+      </div>
+      <div style="height:220px;"><canvas id="revenueChart"></canvas></div>
+    </div>
+
+    <!-- Orders table -->
+    <div class="glass">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+        <div class="section-title">&#128722; All Orders</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <select id="statusFilter" class="form-select" style="width:auto;padding:.4rem .8rem;font-size:.82rem;" onchange="filterOrders()">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button class="btn-outline" onclick="loadOrders()" style="font-size:.82rem;">&#8635; Refresh</button>
+        </div>
+      </div>
+      <div class="orders-table-wrap">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading orders...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: SETTINGS ═════════════════════════════════ -->
+  <div class="tab-content" id="tab-settings">
+
+    <!-- Payment & Notifications -->
+    <div class="glass">
+      <div class="section-title" style="margin-bottom:.4rem;">&#128179; Payment & Notifications</div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1.5rem;">Configure your payment link and email notification system.</p>
+
+      <div style="margin-bottom:1.25rem;">
+        <label class="form-label">Payment Link</label>
+        <input class="form-input" type="url" id="paymentLink" placeholder="https://pay.cashplus.ma/... or https://wise.com/pay/..."/>
+        <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">💳 This link is shown to customers after order confirmation (CashPlus, Wise, PayPal, etc.)</p>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:1.25rem;">
+        <div>
+          <label class="form-label">Resend API Key</label>
+          <input class="form-input" type="password" id="resendApiKey" placeholder="re_xxxxxxxxxxxx"/>
+          <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">🔑 Get free key at <a href="https://resend.com" target="_blank" style="color:#a5b4fc;">resend.com</a> (3k emails/month free)</p>
+        </div>
+        <div>
+          <label class="form-label">Notification Email</label>
+          <input class="form-input" type="email" id="notifyEmail" placeholder="you@example.com"/>
+          <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">📧 Receive order notifications here</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom:1.75rem;">
+        <label class="form-label">Sender Name (From)</label>
+        <input class="form-input" type="text" id="resendFrom" placeholder="My Store Orders &lt;orders@mystore.com&gt;"/>
+        <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">⚠️ The "from" address must be verified in your Resend account.</p>
+      </div>
+
+      <button class="btn-primary" onclick="saveSettings()" id="saveSettingsBtn">&#128190; Save Settings</button>
+    </div>
+
+    <!-- Inventory Sync -->
+    <div class="glass">
+      <div class="section-title" style="margin-bottom:.4rem;">&#128260; Inventory Sync</div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1.5rem;">Paste a URL to a JSON or CSV product feed. The bot will auto-update its product catalog.</p>
+
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Inventory Feed URL</label>
+        <div style="display:flex;gap:.65rem;">
+          <input class="form-input" type="url" id="inventoryUrl" placeholder="https://yourstore.com/products.json" style="flex:1;"/>
+          <button class="btn-primary" onclick="syncInventory()" id="syncBtn" style="white-space:nowrap;">&#8635; Sync Now</button>
+        </div>
+        <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">
+          Supports JSON array: <code style="color:#a5b4fc;background:rgba(99,102,241,.1);padding:.1rem .3rem;border-radius:4px;">[{"name":"Product","price":99,"description":"..."}]</code>
+        </p>
+        <div class="sync-status" id="syncStatus" style="display:none;"></div>
+      </div>
+
+      <!-- Preview -->
+      <div id="syncPreview" style="display:none;">
+        <label class="form-label">Preview (first 5 products)</label>
+        <div class="glass-dark" id="syncPreviewContent" style="font-size:.82rem;color:var(--text-sub);line-height:1.8;"></div>
+      </div>
+    </div>
+
+  </div>
+
   </div><!-- /content -->
 </main>
 </div><!-- /app -->
@@ -742,7 +929,7 @@ const CURRENCY_SYMBOLS = { MAD:'DH', USD:'$', EUR:'\u20AC', GBP:'\u00A3', SAR:'\
 const TAB_TITLES = {
   customize:'tab_custom', brain:'tab_brain', analytics:'tab_analytics',
   deploy:'tab_deploy', billing:'tab_billing',
-  profit:'tab_profit', advisor:'tab_advisor'
+  profit:'tab_profit', advisor:'tab_advisor', orders:'tab_orders', settings:'tab_settings'
 };
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -1418,6 +1605,308 @@ function showToast(msg, isError=false) {
 }
 function escAttr(str) { return (str||'').toString().replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 document.getElementById('nav-billing').addEventListener('click', updateBillingDisplay);
+
+
+// ══════════════════════════════════════════════════════════════
+//  ORDERS TAB
+// ══════════════════════════════════════════════════════════════
+let allOrders    = [];
+let revenueChart = null;
+
+async function loadOrders() {
+  const { data, error } = await sb.from('orders')
+    .select('*')
+    .eq('merchant_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) { showToast('Failed to load orders', true); return; }
+  allOrders = data || [];
+  renderOrdersTable(allOrders);
+  await loadOrdersMetrics();
+  renderRevenueChart();
+}
+
+function filterOrders() {
+  const status = document.getElementById('statusFilter').value;
+  const filtered = status ? allOrders.filter(o => o.status === status) : allOrders;
+  renderOrdersTable(filtered);
+}
+
+function renderOrdersTable(orders) {
+  const tbody = document.getElementById('ordersTableBody');
+  if (!orders.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">No orders yet. Orders will appear here once customers place them.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = orders.map(o => `
+    <tr onclick="viewOrder('${o.id}')">
+      <td><code style="font-size:.78rem;color:#a5b4fc;background:rgba(99,102,241,.1);padding:.15rem .4rem;border-radius:5px;">#${o.id.slice(0,8).toUpperCase()}</code></td>
+      <td style="font-weight:600;color:#f1f5f9;">${escHtml2(o.customer_name)}</td>
+      <td><a href="tel:${escHtml2(o.customer_phone)}" onclick="event.stopPropagation()" style="color:#a5b4fc;">${escHtml2(o.customer_phone)}</a></td>
+      <td style="font-weight:700;color:#f1f5f9;">${Number(o.total_price).toLocaleString()} ${o.currency}</td>
+      <td><span class="status-badge status-${o.status}">${statusEmoji(o.status)} ${o.status}</span></td>
+      <td style="color:var(--text-muted);font-size:.82rem;">${new Date(o.created_at).toLocaleDateString()}</td>
+      <td>
+        <select class="form-select" style="width:auto;padding:.3rem .6rem;font-size:.75rem;"
+          onclick="event.stopPropagation()"
+          onchange="updateOrderStatus('${o.id}', this.value)">
+          ${['pending','confirmed','shipped','delivered','cancelled'].map(s =>
+            `<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`).join('');
+}
+
+function statusEmoji(s) {
+  return {pending:'⏳',confirmed:'✅',shipped:'🚚',delivered:'📦',cancelled:'❌'}[s]||'●';
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+  const { error } = await sb.from('orders').update({ status: newStatus }).eq('id', orderId);
+  if (error) { showToast('Update failed', true); return; }
+  const order = allOrders.find(o => o.id === orderId);
+  if (order) order.status = newStatus;
+  showToast(`Order status → ${newStatus}`);
+  loadOrdersMetrics();
+}
+
+async function loadOrdersMetrics() {
+  const { count: convCount } = await sb.from('conversations')
+    .select('*', { count:'exact', head:true }).eq('merchant_id', userId);
+  const revenue      = allOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total_price),0);
+  const orderCount   = allOrders.filter(o=>o.status!=='cancelled').length;
+  const conversion   = convCount > 0 ? ((orderCount / convCount) * 100).toFixed(1) : 0;
+  const aov          = orderCount > 0 ? (revenue / orderCount).toFixed(0) : 0;
+  document.getElementById('metricRevenue').textContent    = revenue.toLocaleString() + ' MAD';
+  document.getElementById('metricOrders').textContent     = orderCount;
+  document.getElementById('metricConversion').textContent = conversion + '%';
+  document.getElementById('metricAOV').textContent        = aov + ' MAD';
+}
+
+function renderRevenueChart() {
+  const days   = parseInt(document.getElementById('chartPeriod')?.value || '30');
+  const now    = new Date();
+  const labels = [];
+  const data   = [];
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const dayStr = d.toISOString().slice(0,10);
+    labels.push(d.toLocaleDateString('en',{month:'short',day:'numeric'}));
+    const dayOrders = allOrders.filter(o =>
+      o.created_at.slice(0,10) === dayStr && o.status !== 'cancelled');
+    data.push(dayOrders.reduce((s,o) => s + Number(o.total_price), 0));
+  }
+  const ctx = document.getElementById('revenueChart')?.getContext('2d');
+  if (!ctx) return;
+  if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
+  revenueChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Revenue (MAD)',
+        data,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,.12)',
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#6366f1',
+        fill: true,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor:'rgba(15,23,42,.95)', titleColor:'#a5b4fc', bodyColor:'#e2e8f0', padding:10, cornerRadius:10 }
+      },
+      scales: {
+        x: { ticks:{ color:'#475569', font:{size:10}, maxRotation:0, maxTicksLimit:8 }, grid:{ color:'rgba(255,255,255,.04)' } },
+        y: { ticks:{ color:'#475569', callback:v=>'MAD '+v.toLocaleString() }, grid:{ color:'rgba(255,255,255,.06)' }, beginAtZero:true }
+      }
+    }
+  });
+}
+
+function viewOrder(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  const itemsHtml = (o.items||[]).map(i =>
+    `<div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.04);">
+      <span style="color:#94a3b8;">${escHtml2(i.name)}</span>
+      <span style="font-weight:700;color:#f1f5f9;">${i.price} ${o.currency}</span>
+    </div>`).join('');
+  document.getElementById('orderModalBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="glass-dark">
+        <p style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;">Customer</p>
+        <p style="margin:3px 0;font-size:.9rem;"><strong>Name:</strong> ${escHtml2(o.customer_name)}</p>
+        <p style="margin:3px 0;font-size:.9rem;"><strong>Phone:</strong> <a href="tel:${escHtml2(o.customer_phone)}" style="color:#a5b4fc;">${escHtml2(o.customer_phone)}</a></p>
+        <p style="margin:3px 0;font-size:.9rem;"><strong>Address:</strong> ${escHtml2(o.customer_address)}</p>
+      </div>
+      <div class="glass-dark">
+        <p style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;">Items</p>
+        ${itemsHtml}
+        <div style="display:flex;justify-content:space-between;padding:.5rem 0 0;margin-top:.25rem;">
+          <span style="font-weight:700;color:#f1f5f9;">Total</span>
+          <span style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;color:#a5b4fc;">${Number(o.total_price).toLocaleString()} ${o.currency}</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+        <span class="status-badge status-${o.status}">${statusEmoji(o.status)} ${o.status}</span>
+        <span style="font-size:.78rem;color:var(--text-muted);">${new Date(o.created_at).toLocaleString()}</span>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${['confirmed','shipped','delivered','cancelled'].map(s =>
+          `<button class="btn-outline" style="font-size:.8rem;" onclick="updateOrderStatus('${o.id}','${s}');closeOrderModal();">${statusEmoji(s)} ${s}</button>`
+        ).join('')}
+      </div>
+    </div>`;
+  document.getElementById('orderModal').classList.add('active');
+}
+function closeOrderModal() { document.getElementById('orderModal').classList.remove('active'); }
+document.getElementById('orderModal').addEventListener('click', e => { if(e.target===document.getElementById('orderModal')) closeOrderModal(); });
+
+// ══════════════════════════════════════════════════════════════
+//  SETTINGS TAB
+// ══════════════════════════════════════════════════════════════
+function populateSettings() {
+  if (!profile) return;
+  const el = id => document.getElementById(id);
+  if (el('paymentLink'))  el('paymentLink').value  = profile.payment_link    || '';
+  if (el('resendApiKey')) el('resendApiKey').value  = profile.resend_api_key  ? '••••••••' : '';
+  if (el('notifyEmail'))  el('notifyEmail').value   = profile.notify_email    || '';
+  if (el('resendFrom'))   el('resendFrom').value    = profile.resend_from     || '';
+  if (el('inventoryUrl')) el('inventoryUrl').value  = profile.inventory_url   || '';
+}
+
+async function saveSettings() {
+  const btn = document.getElementById('saveSettingsBtn');
+  btn.textContent = '...'; btn.disabled = true;
+
+  const resendRaw = document.getElementById('resendApiKey').value.trim();
+  const updates = {
+    payment_link:   document.getElementById('paymentLink').value.trim(),
+    notify_email:   document.getElementById('notifyEmail').value.trim(),
+    resend_from:    document.getElementById('resendFrom').value.trim(),
+    inventory_url:  document.getElementById('inventoryUrl').value.trim(),
+  };
+  // Only update API key if changed (not the masked placeholder)
+  if (resendRaw && resendRaw !== '••••••••') updates.resend_api_key = resendRaw;
+
+  const { error } = await sb.from('profiles').update(updates).eq('id', userId);
+  btn.textContent = '💾 Save Settings'; btn.disabled = false;
+  if (error) { showToast('Save failed: ' + error.message, true); return; }
+  profile = { ...profile, ...updates };
+  showToast('✅ Settings saved!');
+}
+
+// ── INVENTORY SYNC ─────────────────────────────────────────────
+async function syncInventory() {
+  const url = document.getElementById('inventoryUrl').value.trim();
+  if (!url) { showToast('Please enter a URL', true); return; }
+
+  const btn       = document.getElementById('syncBtn');
+  const statusEl  = document.getElementById('syncStatus');
+  const previewEl = document.getElementById('syncPreview');
+  const previewContent = document.getElementById('syncPreviewContent');
+
+  btn.disabled = true;
+  statusEl.style.display = 'flex';
+  statusEl.className = 'sync-status loading';
+  statusEl.innerHTML = '<div class="spinner"></div> Fetching product data...';
+  previewEl.style.display = 'none';
+
+  try {
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json,text/csv,*/*' } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+
+    let products = [];
+
+    // Try JSON first
+    try {
+      const json = JSON.parse(text);
+      const arr = Array.isArray(json) ? json : (json.products || json.data || json.items || []);
+      products = arr.map(p => ({
+        name:        p.name || p.title || p.product_name || p.nom || '',
+        price:       parseFloat(p.price || p.prix || p.cost || 0),
+        description: p.description || p.desc || p.details || '',
+      })).filter(p => p.name);
+    } catch {
+      // Try CSV
+      const lines = text.split('
+').filter(l => l.trim());
+      const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const nameIdx = header.findIndex(h => ['name','nom','title','product'].includes(h));
+      const priceIdx = header.findIndex(h => ['price','prix','cost'].includes(h));
+      const descIdx  = header.findIndex(h => ['description','desc','details'].includes(h));
+      if (nameIdx === -1) throw new Error('CSV must have a "name" column');
+      products = lines.slice(1).map(line => {
+        const cols = line.split(',');
+        return {
+          name:        (cols[nameIdx]||'').trim(),
+          price:       parseFloat((cols[priceIdx]||'0').trim()) || 0,
+          description: descIdx >= 0 ? (cols[descIdx]||'').trim() : '',
+        };
+      }).filter(p => p.name);
+    }
+
+    if (!products.length) throw new Error('No products found in the feed');
+
+    // Save to structured_data
+    const current_sd = profile.structured_data || {};
+    const updated_sd = { ...current_sd, products };
+    const { error } = await sb.from('profiles').update({ structured_data: updated_sd, inventory_url: url }).eq('id', userId);
+    if (error) throw new Error('Supabase: ' + error.message);
+
+    profile.structured_data = updated_sd;
+    profile.inventory_url   = url;
+
+    statusEl.className = 'sync-status success';
+    statusEl.innerHTML = `✅ Synced ${products.length} products successfully!`;
+
+    // Preview
+    previewContent.innerHTML = products.slice(0,5).map(p =>
+      `<div style="padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.05);">
+        <strong style="color:#f1f5f9;">${escHtml2(p.name)}</strong>
+        <span style="color:#a5b4fc;margin:0 .4rem;">—</span>
+        <span>${p.price} MAD</span>
+        ${p.description ? `<span style="color:var(--text-muted);margin-right:.4rem;"> · ${escHtml2(p.description.slice(0,50))}</span>` : ''}
+      </div>`).join('') + (products.length > 5 ? `<div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">...and ${products.length - 5} more</div>` : '');
+    previewEl.style.display = 'block';
+    showToast(`✅ ${products.length} products synced!`);
+
+  } catch(err) {
+    statusEl.className = 'sync-status error';
+    statusEl.innerHTML = `❌ Error: ${err.message}`;
+    showToast('Sync failed: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── HOOK INTO showTab FOR NEW TABS ────────────────────────────
+const _origShowTab = showTab;
+function showTab(name) {
+  _origShowTab(name);
+  if (name === 'orders')   loadOrders();
+  if (name === 'settings') populateSettings();
+}
+
+// ── HOOK INTO populateForms FOR SETTINGS ─────────────────────
+const _origPopulateForms = populateForms;
+function populateForms() {
+  _origPopulateForms();
+  populateSettings();
+}
+
+// ── UTILS (needed in new JS scope) ───────────────────────────
+function escHtml2(str) {
+  return (str||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 </script>
 </body>
 </html>
