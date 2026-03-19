@@ -948,9 +948,8 @@ function buildSystemPrompt() {
     es:'Responde en español.', de:'Antworte auf Deutsch.',
   };
 
-  const parts = [
-    `أنت ${escHtml(merchant.bot_name||'مساعد مبيعات')} ديال "${escHtml(merchant.store_name)}". أسلوبك: ${toneDesc}.`,
-    \`,
+const parts = [
+    `أنت ${escHtml(merchant.bot_name || 'مساعد مبيعات')} ديال "${escHtml(merchant.store_name)}". أسلوبك: ${toneDesc}.`,
     `## مهمتك الأساسية — SALES CLOSER`,
     `- أجب على أسئلة المنتجات بدقة`,
     `- اقنع الزبون بالشراء`,
@@ -959,15 +958,13 @@ function buildSystemPrompt() {
     `  [[ORDER_READY:الاسم|رقم_الهاتف|العنوان|اسم_المنتج:السعر,اسم_منتج2:سعر2]]`,
     `  مثال: [[ORDER_READY:أحمد|0661234567|طنجة شارع محمد5|روب حمراء:299,توصيل:30]]`,
     `- لا تذكر أبداً أن هناك رابط دفع قبل ما تجمع المعلومات`,
-    `,
-    `## اللغة`, langInst[uiLang]||langInst['ar'],
+    `## اللغة: ${langInst[uiLang] || langInst['ar']}`,
     `اسم الزبون: ${escHtml(customerName)}.`,
-    `,
     `## قواعد صارمة`,
     `- لا تقل أنك AI أو Groq`,
     `- لا تخترع أسعاراً`,
     `- ردود قصيرة (2-3 جمل)`,
-    `- لا تُظهر التفكير الداخلي`,
+    `- لا تُظهر التفكير الداخلي`
   ];
 
   if (bd.business_type||bd.main_city) {
