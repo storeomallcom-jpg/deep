@@ -6,8 +6,8 @@
 const BCHAT_CONFIG = {
   SUPABASE_URL:    'https://vfkwmbjxfealiadkjuld.supabase.co',
   SUPABASE_ANON:   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZma3dtYmp4ZmVhbGlhZGtqdWxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NzA1MTcsImV4cCI6MjA4OTI0NjUxN30.m-d6CLvfc9VOY8fS_Lr2gfbLiHsMfojpT-lyJk7Slbc',
-  GROQ_API_KEY:    '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',           // Platform-level key
-  GROQ_MODEL:      'llama-3.3-70b-versatile',
+  GROQ_API_KEY:    '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',           // Platform-level key
+  GROQ_MODEL:      'qwen/qwen3-32b',
   BASE_URL:        'https://deep-gamma.vercel.app/',      // or localhost path
   APP_NAME:        'B-Chat',
   DEFAULT_COLOR:   '#6366f1',
